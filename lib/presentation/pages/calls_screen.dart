@@ -325,8 +325,6 @@ void _openPatientDetails(BuildContext context, Map<String, dynamic> call) {
                 ),
               ],
             ),
-            
-            // УДАЛЕНО: Кнопки действий
           ],
         ),
       ),

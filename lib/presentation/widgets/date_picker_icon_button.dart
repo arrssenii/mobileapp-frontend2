@@ -9,7 +9,7 @@ class DatePickerIconButton extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
   final String? tooltip;
-  final bool showSelectedDate;
+  final bool showDateText;
 
   const DatePickerIconButton({
     super.key,
@@ -20,7 +20,7 @@ class DatePickerIconButton extends StatelessWidget {
     this.icon = Icons.calendar_today,
     this.iconColor,
     this.tooltip,
-    this.showSelectedDate = false,
+    this.showDateText = false,
   });
 
   Future<void> _showDatePicker(BuildContext context) async {
@@ -55,7 +55,7 @@ class DatePickerIconButton extends StatelessWidget {
     }
   }
 
-  @override
+   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -65,13 +65,10 @@ class DatePickerIconButton extends StatelessWidget {
           onPressed: () => _showDatePicker(context),
           tooltip: tooltip ?? 'Выбрать дату',
         ),
-        if (showSelectedDate && initialDate != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Text(
-              DateFormat('dd.MM.yyyy').format(initialDate!),
-              style: const TextStyle(fontSize: 16),
-            ),
+        if (showDateText && initialDate != null)
+          Text(
+            DateFormat('dd.MM.yyyy').format(initialDate!),
+            style: const TextStyle(fontSize: 16),
           ),
       ],
     );

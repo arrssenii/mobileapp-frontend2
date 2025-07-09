@@ -3,6 +3,9 @@ import './patient_detail_screen.dart';
 import 'consultation_screen.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/status_chip.dart';
+import '../widgets/call_option_dialog.dart';
+import '../widgets/action_tile.dart';
+import '../widgets/detail_row.dart';
 
 class CallsScreen extends StatefulWidget {
   const CallsScreen({super.key});
@@ -114,124 +117,44 @@ class _CallsScreenState extends State<CallsScreen> {
   });
 }
 
+// Обновим _showCallOptions
 void _showCallOptions(BuildContext context, Map<String, dynamic> call) {
   showDialog(
     context: context,
     builder: (context) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.0),
+      return CallOptionDialog(
+        call: call,
+        isCompleted: _completedCalls.contains(call['id']),
+        onAccept: () {
+          Navigator.pop(context);
+          _startCallConsultation(call);
+        },
+        onDetails: () {
+          Navigator.pop(context);
+          _showCallDetails(context, call);
+        },
+        onPatient: () {
+          Navigator.pop(context);
+          _openPatientDetails(context, call);
+        },
+        onCancel: () {
+          setState(() {
+            _completedCalls.add(call['id']);
+          });
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Вызов ${call['patientName']} отменен'),
+              backgroundColor: Colors.orange,
             ),
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 16.0,
-              horizontal: 0,
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildCallOptionTile(
-                  context,
-                  icon: Icons.medical_services,
-                  title: 'Принять вызов',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _startCallConsultation(call);
-                  },
-                ),
-                _buildCallOptionTile(
-                  context,
-                  icon: Icons.info_outline,
-                  title: 'Детали вызова',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showCallDetails(context, call);
-                  },
-                ),
-                _buildCallOptionTile(
-                  context,
-                  icon: Icons.person,
-                  title: 'Карта пациента',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _openPatientDetails(context, call);
-                  },
-                ),
-                if (!_completedCalls.contains(call['id']))
-                  _buildCallOptionTile(
-                    context,
-                    icon: Icons.close,
-                    title: 'Отменить вызов',
-                    onTap: () {
-                      setState(() {
-                        _completedCalls.add(call['id']);
-                      });
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Вызов ${call['patientName']} отменен'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 8),
-                TextButton(
-                  child: const Text('Закрыть', 
-                    style: TextStyle(
-                      color: Color(0xFF8B8B8B),
-                      fontSize: 16,
-                    ),
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-        ),
+          );
+        },
       );
     },
   );
 }
 
-Widget _buildCallOptionTile(BuildContext context, {
-  required IconData icon,
-  required String title,
-  required VoidCallback onTap,
-}) {
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 12.0,
-          horizontal: 24.0,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, 
-              color: const Color(0xFF8B8B8B),
-              size: 28,
-            ),
-            const SizedBox(width: 20),
-            Text(title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
+// Обновим _showCallDetails
 void _showCallDetails(BuildContext context, Map<String, dynamic> call) {
   showDialog(
     context: context,
@@ -256,11 +179,11 @@ void _showCallDetails(BuildContext context, Map<String, dynamic> call) {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildDetailRow('Пациент', call['patientName']),
-                  _buildDetailRow('Адрес', call['address']),
-                  _buildDetailRow('Время', call['time']),
-                  _buildDetailRow('Статус', call['status']),
-                  _buildDetailRow('Лечащий врач', call['doctor']),
+                  DetailRow(label: 'Пациент', value: call['patientName']),
+                  DetailRow(label: 'Адрес', value: call['address']),
+                  DetailRow(label: 'Время', value: call['time']),
+                  DetailRow(label: 'Статус', value: call['status']),
+                  DetailRow(label: 'Лечащий врач', value: call['doctor']),
                   const SizedBox(height: 10),
                   Text('Примечания:', style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -280,25 +203,6 @@ void _showCallDetails(BuildContext context, Map<String, dynamic> call) {
         ),
       );
     },
-  );
-}
-
-Widget _buildDetailRow(String label, String value) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4.0),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            '$label:',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        Expanded(child: Text(value)),
-      ],
-    ),
   );
 }
 

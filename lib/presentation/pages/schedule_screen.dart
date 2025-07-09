@@ -3,6 +3,7 @@ import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
 import 'package:demo_app/presentation/pages/consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
 import '../../data/models/appointment_model.dart';
+import '../widgets/action_tile.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -120,8 +121,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildOptionTile(
-                  context,
+                ActionTile(
                   icon: Icons.person,
                   title: 'Информация о пациенте',
                   onTap: () {
@@ -129,8 +129,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     _openPatientDetails(context, appointment);
                   },
                 ),
-                _buildOptionTile(
-                  context,
+                ActionTile(
                   icon: Icons.medical_services,
                   title: 'Начать приём',
                   onTap: () {
@@ -138,8 +137,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     _openConsultationScreen(context, appointment);
                   },
                 ),
-                _buildOptionTile(
-                  context,
+                ActionTile(
                   icon: Icons.close,
                   title: 'Не явился',
                   onTap: () {
@@ -165,41 +163,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
       );
     },
-  );
-}
-
-Widget _buildOptionTile(BuildContext context, {
-  required IconData icon,
-  required String title,
-  required VoidCallback onTap,
-}) {
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 16.0,
-          horizontal: 24.0,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, 
-              color: Theme.of(context).primaryColor,
-              size: 28,
-            ),
-            const SizedBox(width: 20),
-            Text(title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
   );
 }
 

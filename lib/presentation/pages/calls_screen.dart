@@ -139,19 +139,20 @@ class _CallsScreenState extends State<CallsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Вызовы'),
-        backgroundColor: const Color(0xFF8B8B8B), // Серый
-        foregroundColor: Colors.white,
-        actions: [
-          // ТОЛЬКО кнопка обновления
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshCalls,
-            tooltip: 'Обновить список',
+          title: Text(
+            'Вызовы',
+            style: TextStyle(color: Color(0xFF8B8B8B)),
           ),
-        ],
-        // УДАЛЕН leading (кнопка добавления пациента)
-      ),
+          backgroundColor: const Color(0xFFFFFFFF),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _refreshCalls,
+              tooltip: 'Обновить список',
+              color: Color(0xFF8B8B8B),
+            ),
+          ],
+        ),
       body: ListView.builder(
         itemCount: _filteredCalls.length,
         itemBuilder: (context, index) {
@@ -163,8 +164,6 @@ class _CallsScreenState extends State<CallsScreen> {
   }
 
   Widget _buildCallCard(Map<String, dynamic> call) {
-  final isEmergency = call['status'] == 'ЭКСТРЕННЫЙ';
-  final isCompleted = _completedCalls.contains(call['id']);
   
   return CustomCard(
     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

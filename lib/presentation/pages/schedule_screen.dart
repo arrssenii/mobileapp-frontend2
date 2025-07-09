@@ -123,45 +123,106 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _showAppointmentOptions(BuildContext context, Appointment appointment) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.person),
-                title: const Text('Информация о пациенте'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _openPatientDetails(context, appointment);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.medical_services),
-                title: const Text('Начать приём'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _openConsultationScreen(context, appointment);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.close),
-                title: const Text('Не явился'),
-                onTap: () {
-                  setState(() {
-                    appointment.status = AppointmentStatus.noShow;
-                  });
-                  Navigator.pop(context);
-                },
-              ),
-            ],
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 0,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildOptionTile(
+                  context,
+                  icon: Icons.person,
+                  title: 'Информация о пациенте',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openPatientDetails(context, appointment);
+                  },
+                ),
+                _buildOptionTile(
+                  context,
+                  icon: Icons.medical_services,
+                  title: 'Начать приём',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openConsultationScreen(context, appointment);
+                  },
+                ),
+                _buildOptionTile(
+                  context,
+                  icon: Icons.close,
+                  title: 'Не явился',
+                  onTap: () {
+                    setState(() {
+                      appointment.status = AppointmentStatus.noShow;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  child: const Text('Отмена', 
+                    style: TextStyle(
+                      color: Color(0xFF8B8B8B),
+                      fontSize: 16,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildOptionTile(BuildContext context, {
+  required IconData icon,
+  required String title,
+  required VoidCallback onTap,
+}) {
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: 16.0,
+          horizontal: 24.0,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, 
+              color: Theme.of(context).primaryColor,
+              size: 28,
+            ),
+            const SizedBox(width: 20),
+            Text(title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
   void _openPatientDetails(BuildContext context, Appointment appointment) {
     final patient = {

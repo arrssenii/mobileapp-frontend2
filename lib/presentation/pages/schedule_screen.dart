@@ -4,6 +4,7 @@ import 'package:demo_app/presentation/pages/consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
 import '../../data/models/appointment_model.dart';
 import '../widgets/action_tile.dart';
+import '../widgets/date_carousel.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -14,50 +15,13 @@ class ScheduleScreen extends StatefulWidget {
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _selectedDate = DateTime.now();
-  late final List<DateTime> _dates;
   List<Appointment> _appointments = [];
-  late ScrollController _scrollController; // Добавляем контроллер
-  final double _dateItemWidth = 86.0; // Ширина одного элемента даты (70 + 16 отступ)
+  // Удалены: _dates, _scrollController
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
-    final today = DateTime.now();
-    _dates = List.generate(15, (index) => today.add(Duration(days: index - 7)));
-    
-    // Центрируем на текущей дате после инициализации
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _centerSelectedDate();
-    });
-    
     _loadAppointments();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose(); // Не забываем освободить контроллер
-    super.dispose();
-  }
-
-  // Метод для центрирования выбранной даты
-  void _centerSelectedDate() {
-    final selectedIndex = _dates.indexWhere((date) => 
-      date.day == _selectedDate.day && 
-      date.month == _selectedDate.month && 
-      date.year == _selectedDate.year
-    );
-
-    if (selectedIndex != -1) {
-      final viewportWidth = MediaQuery.of(context).size.width;
-      final centerPosition = selectedIndex * _dateItemWidth - (viewportWidth / 2) + (_dateItemWidth / 2);
-      
-      _scrollController.animateTo(
-        centerPosition,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   void _loadAppointments() {
@@ -75,23 +39,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _handleDateSelected(DateTime date) {
-  // Находим ближайшую доступную дату в карусели
-  final closestDate = _dates.firstWhere(
-    (d) => d.day == date.day && d.month == date.month && d.year == date.year,
-    orElse: () => _dates.reduce(
-      (a, b) => a.difference(date).abs() < b.difference(date).abs() ? a : b
-    ),
-  );
-
-  setState(() {
-    _selectedDate = closestDate; // Обновляем выбранную дату
-  });
-  
-  _loadAppointments();
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _centerSelectedDate();
-  });
-}
+    setState(() {
+      _selectedDate = date;
+    });
+    _loadAppointments();
+  }
 
   String _getRandomPatientName(int index) {
     final names = [
@@ -327,19 +279,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  String _getDayName(int weekday) {
-    switch (weekday) {
-      case 1: return 'Пн';
-      case 2: return 'Вт';
-      case 3: return 'Ср';
-      case 4: return 'Чт';
-      case 5: return 'Пт';
-      case 6: return 'Сб';
-      case 7: return 'Вс';
-      default: return '';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -358,79 +297,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
           ],
         ),
-        SizedBox(
-          height: 90,
-          child: ListView.builder(
-            controller: _scrollController, // Подключаем контроллер
-            scrollDirection: Axis.horizontal,
-            itemCount: _dates.length,
-            physics: const BouncingScrollPhysics(),
-            itemBuilder: (context, index) {
-              final date = _dates[index];
-              final isSelected = date == _selectedDate;
-              final dayName = _getDayName(date.weekday);
-              final isToday = date.day == DateTime.now().day && 
-                              date.month == DateTime.now().month &&
-                              date.year == DateTime.now().year;
-              
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedDate = date;
-                    _loadAppointments();
-                  });
-                  _centerSelectedDate();
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 70,
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isSelected 
-                      ? Theme.of(context).primaryColor 
-                      : isToday
-                        ? const Color(0xFFD2B48C).withOpacity(0.3)
-                        : const Color(0xFFE0E0E0),
-                    shape: BoxShape.circle,
-                    border: isToday
-                      ? Border.all(color: const Color(0xFFD2B48C), width: 2)
-                      : null,
-                    boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: Theme.of(context).primaryColor.withOpacity(0.5),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          )
-                        ]
-                      : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        dayName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        '${date.day}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+        
+        // Используем новый виджет DateCarousel
+        DateCarousel(
+          initialDate: _selectedDate,
+          onDateSelected: (date) {
+            setState(() {
+              _selectedDate = date;
+            });
+            _loadAppointments();
+          },
+          daysRange: 30, // Увеличили диапазон до 30 дней
         ),
+        
         const SizedBox(height: 20),
         Text(
           'Расписание на ${_selectedDate.day}.${_selectedDate.month}.${_selectedDate.year}',

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'add_patient_screen.dart';
+import './patient_detail_screen.dart';
 import 'consultation_screen.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/status_chip.dart';
@@ -88,27 +88,6 @@ class _CallsScreenState extends State<CallsScreen> {
     });
   }
 
-  void _addNewPatient(BuildContext context) {
-    // Открываем экран добавления пациента и ждем результат
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AddPatientScreen(),
-      ),
-    ).then((newPatient) {
-      if (newPatient != null) {
-        // Переходим на экран пациентов и добавляем нового пациента
-        // В реальном приложении здесь будет вызов метода добавления
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Новый пациент добавлен'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    });
-  }
-
   void _startCallConsultation(Map<String, dynamic> call) {
   Navigator.push(
     context,
@@ -133,6 +112,214 @@ class _CallsScreenState extends State<CallsScreen> {
       );
     }
   });
+}
+
+void _showCallOptions(BuildContext context, Map<String, dynamic> call) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 0,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCallOptionTile(
+                  context,
+                  icon: Icons.medical_services,
+                  title: 'Принять вызов',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startCallConsultation(call);
+                  },
+                ),
+                _buildCallOptionTile(
+                  context,
+                  icon: Icons.info_outline,
+                  title: 'Детали вызова',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showCallDetails(context, call);
+                  },
+                ),
+                _buildCallOptionTile(
+                  context,
+                  icon: Icons.person,
+                  title: 'Карта пациента',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openPatientDetails(context, call);
+                  },
+                ),
+                if (!_completedCalls.contains(call['id']))
+                  _buildCallOptionTile(
+                    context,
+                    icon: Icons.close,
+                    title: 'Отменить вызов',
+                    onTap: () {
+                      setState(() {
+                        _completedCalls.add(call['id']);
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Вызов ${call['patientName']} отменен'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    },
+                  ),
+                const SizedBox(height: 8),
+                TextButton(
+                  child: const Text('Закрыть', 
+                    style: TextStyle(
+                      color: Color(0xFF8B8B8B),
+                      fontSize: 16,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildCallOptionTile(BuildContext context, {
+  required IconData icon,
+  required String title,
+  required VoidCallback onTap,
+}) {
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: 12.0,
+          horizontal: 24.0,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, 
+              color: const Color(0xFF8B8B8B),
+              size: 28,
+            ),
+            const SizedBox(width: 20),
+            Text(title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+void _showCallDetails(BuildContext context, Map<String, dynamic> call) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: AlertDialog(
+            title: Text(
+              'Детали вызова',
+              style: TextStyle(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDetailRow('Пациент', call['patientName']),
+                  _buildDetailRow('Адрес', call['address']),
+                  _buildDetailRow('Время', call['time']),
+                  _buildDetailRow('Статус', call['status']),
+                  _buildDetailRow('Лечащий врач', call['doctor']),
+                  const SizedBox(height: 10),
+                  Text('Примечания:', style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  )),
+                  const Text('Пациент сообщил о сильных болях в груди'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Закрыть'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildDetailRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Expanded(child: Text(value)),
+      ],
+    ),
+  );
+}
+
+void _openPatientDetails(BuildContext context, Map<String, dynamic> call) {
+  // В реальном приложении здесь будет запрос данных пациента
+  // Сейчас используем фиктивные данные
+  final patient = {
+    'id': call['id'],
+    'fullName': call['patientName'],
+    'room': 'Не госпитализирован',
+    'diagnosis': 'Экстренный вызов',
+    'phone': '+7 (XXX) XXX-XX-XX',
+    'address': call['address'],
+  };
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => PatientDetailScreen(patient: patient),
+    ),
+  );
 }
 
   @override
@@ -164,22 +351,29 @@ class _CallsScreenState extends State<CallsScreen> {
   }
 
   Widget _buildCallCard(Map<String, dynamic> call) {
+  final isEmergency = call['status'] == 'ЭКСТРЕННЫЙ';
+  final isCompleted = _completedCalls.contains(call['id']);
   
-  return CustomCard(
-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Column(
+  return GestureDetector(
+    onTap: () => _showCallOptions(context, call),
+    child: CustomCard(
+      backgroundColor: isCompleted 
+          ? Colors.green[100] 
+          : isEmergency 
+              ? const Color(0xFFFFEBEE).withOpacity(0.7) 
+              : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Статус вызова
                 StatusChip(
                   text: call['status'],
-                  isEmergency: call['status'] == 'ЭКСТРЕННЫЙ',
+                  isEmergency: isEmergency,
                 ),
-                
-                // Время вызова
                 Text(
                   call['time'],
                   style: TextStyle(
@@ -193,7 +387,6 @@ class _CallsScreenState extends State<CallsScreen> {
             
             const SizedBox(height: 12),
             
-            // ФИО пациента
             Text(
               call['patientName'],
               style: const TextStyle(
@@ -203,7 +396,6 @@ class _CallsScreenState extends State<CallsScreen> {
             ),
             const SizedBox(height: 8),
             
-            // Адрес
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -219,7 +411,6 @@ class _CallsScreenState extends State<CallsScreen> {
             ),
             const SizedBox(height: 8),
             
-            // Лечащий врач
             Row(
               children: [
                 Icon(Icons.person_outline, size: 20, color: Theme.of(context).primaryColor),
@@ -231,35 +422,11 @@ class _CallsScreenState extends State<CallsScreen> {
               ],
             ),
             
-            // Кнопки действий
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Кнопка принятия вызова
-                OutlinedButton.icon(
-                  icon: Icon(Icons.check_circle_outline, size: 18, color: Theme.of(context).primaryColor),
-                  label: Text('Принять', style: TextStyle(color: Theme.of(context).primaryColor)),
-                  onPressed: () => _startCallConsultation(call),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                
-                // Кнопка деталей
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.info_outline, size: 18),
-                  label: const Text('Детали'),
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD2B48C), // Бежевый
-                  ),
-                ),
-              ],
-            ),
+            // УДАЛЕНО: Кнопки действий
           ],
-       ),
-    );
-  }
+        ),
+      ),
+    ),
+  );
+}
 }

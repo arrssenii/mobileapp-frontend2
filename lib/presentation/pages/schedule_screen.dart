@@ -2,28 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
 import 'package:demo_app/presentation/pages/consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
-
-class Appointment {
-  final int id;
-  final String patientName;
-  final String cabinet;
-  final DateTime time;
-  AppointmentStatus status;
-
-  Appointment({
-    required this.id,
-    required this.patientName,
-    required this.cabinet,
-    required this.time,
-    this.status = AppointmentStatus.scheduled,
-  });
-}
-
-enum AppointmentStatus {
-  scheduled,
-  completed,
-  noShow,
-}
+import '../../data/models/appointment_model.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});

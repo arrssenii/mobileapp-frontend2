@@ -22,18 +22,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _currentIndex == 0
-              ? 'Расписание'
-              : _currentIndex == 1
-                  ? 'Список пациентов'
-                  : 'Вызовы',
-        ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF8B8B8B), // Серый
-        foregroundColor: Colors.white,
-      ),
       body: _pages[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

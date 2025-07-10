@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 // Domain Layer
-import 'domain/entities/user.dart';
-import 'domain/repositories/auth_repository.dart';
 import 'domain/usecases/login_usecase.dart';
 
 // Data Layer

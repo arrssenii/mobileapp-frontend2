@@ -188,7 +188,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         statusText = 'Приём завершён';
         break;
       case AppointmentStatus.scheduled:
-        default:
         break;
     }
 

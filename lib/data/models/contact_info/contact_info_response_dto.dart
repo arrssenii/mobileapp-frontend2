@@ -1,4 +1,4 @@
-import '../../domain/entities/contact_info.dart';
+import '../../../domain/entities/contact_info.dart';
 
 class ContactInfoResponseDTO {
   final String phone;

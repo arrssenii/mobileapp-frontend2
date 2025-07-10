@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../models/allergy_dto.dart';
-import '../models/add_allergy_request_dto.dart';
+import '../models/allergy/allergy_dto.dart';
+import '../models/allergy/add_allergy_request_dto.dart';
 import '../../core/error/exceptions.dart';
 
 abstract class AllergyRemoteDataSource {

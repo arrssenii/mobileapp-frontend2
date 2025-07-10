@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../domain/entities/contact_info.dart';
-import '../models/create_contact_info_request_dto.dart';
-import '../models/contact_info_response_dto.dart';
+import '../models/contact_info/create_contact_info_request_dto.dart';
+import '../models/contact_info/contact_info_response_dto.dart';
 import '../../core/error/exceptions.dart';
 
 abstract class ContactInfoRemoteDataSource {

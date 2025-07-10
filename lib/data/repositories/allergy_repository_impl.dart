@@ -1,7 +1,7 @@
 import '../../domain/repositories/allergy_repository.dart';
 import '../../domain/entities/allergy.dart';
 import '../../core/error/exceptions.dart';
-import '../models/add_allergy_request_dto.dart';
+import '../models/allergy/add_allergy_request_dto.dart';
 import '../datasources/allergy_remote_data_source.dart';
 
 class AllergyRepositoryImpl implements AllergyRepository {

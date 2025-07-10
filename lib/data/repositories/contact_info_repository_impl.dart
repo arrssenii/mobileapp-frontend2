@@ -1,8 +1,7 @@
-import 'package:dio/dio.dart';
 import '../../domain/repositories/contact_info_repository.dart';
 import '../../domain/entities/contact_info.dart';
 import '../datasources/contact_info_remote_data_source.dart';
-import '../models/create_contact_info_request_dto.dart';
+import '../models/contact_info/create_contact_info_request_dto.dart';
 import '../../core/error/exceptions.dart';
 
 class ContactInfoRepositoryImpl implements ContactInfoRepository {

@@ -1,4 +1,4 @@
-import '../../domain/entities/allergy.dart'; // или соответствующий путь
+import '../../../domain/entities/allergy.dart'; // или соответствующий путь
 
 
 class AllergyDTO {

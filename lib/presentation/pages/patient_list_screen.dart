@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'patient_detail_screen.dart';
 import 'patient_history_screen.dart';
 import 'add_patient_screen.dart';
-import '../widgets/patient_card.dart';
+import '../widgets/patient_list.dart'; // Импортируем новый виджет
 
 class PatientListScreen extends StatefulWidget {
   const PatientListScreen({super.key});
@@ -14,14 +14,11 @@ class PatientListScreen extends StatefulWidget {
 class _PatientListScreenState extends State<PatientListScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _patients = [];
-  List<Map<String, dynamic>> _filteredPatients = [];
 
   @override
   void initState() {
     super.initState();
-    // Загрузка фиктивных данных пациентов
     _loadPatients();
-    _searchController.addListener(_filterPatients);
   }
 
   @override
@@ -186,115 +183,22 @@ class _PatientListScreenState extends State<PatientListScreen> {
       'bloodType': 'AB(IV) Rh+',
     }
   ];
-    _filteredPatients = _patients;
-  }
+}
 
-  void addNewPatient(Map<String, dynamic> patientData) {
+  void _addNewPatient(Map<String, dynamic> patientData) {
     setState(() {
       _patients.add({
         'id': _patients.length + 1,
         'fullName': patientData['fullName'] ?? 'Новый пациент',
         'room': 'Палата не назначена',
         'diagnosis': 'Диагноз не установлен',
+        'status': 'stable',
+        'isCritical': false,
       });
-      _filteredPatients = _patients;
     });
   }
 
-  void _filterPatients() {
-    final query = _searchController.text.toLowerCase();
-    if (query.isEmpty) {
-      setState(() => _filteredPatients = _patients);
-    } else {
-      setState(() {
-        _filteredPatients = _patients.where((patient) {
-          return patient['fullName'].toLowerCase().contains(query);
-        }).toList();
-      });
-    }
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              // Поле поиска
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Поиск по ФИО пациента',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              
-              // Кнопка фильтра
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.filter_list, size: 25, color: Colors.white),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Фильтрация будет реализована позже')),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              
-              // Кнопка добавления пациента (НОВАЯ КНОПКА)
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.add, size: 25, color: Colors.white),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AddPatientScreen()),
-                  ),
-                  tooltip: 'Добавить пациента',
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: ListView.builder(
-            itemCount: _filteredPatients.length,
-            itemBuilder: (context, index) {
-            final patient = _filteredPatients[index];
-              return PatientCard(
-                patient: patient,
-                onDetails: () => _openPatientDetails(context, patient),
-                onHistory: () => _openPatientHistory(context, patient),
-                showStatusIndicator: true,
-                isSelected: false,
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _openPatientDetails(BuildContext context, Map<String, dynamic> patient) {
+  void _openPatientDetails(Map<String, dynamic> patient) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -303,7 +207,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
     );
   }
 
-  void _openPatientHistory(BuildContext context, Map<String, dynamic> patient) {
+  void _openPatientHistory(Map<String, dynamic> patient) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -312,6 +216,29 @@ class _PatientListScreenState extends State<PatientListScreen> {
           patientName: patient['fullName'],
         ),
       ),
+    );
+  }
+
+  void _openAddPatientScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddPatientScreen()),
+    ).then((result) {
+      if (result != null) {
+        _addNewPatient(result);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PatientList(
+      patients: _patients,
+      searchController: _searchController,
+      onPatientDetails: _openPatientDetails,
+      onPatientHistory: _openPatientHistory,
+      onAddPatient: _openAddPatientScreen,
+      onPatientAdded: _addNewPatient,
     );
   }
 }

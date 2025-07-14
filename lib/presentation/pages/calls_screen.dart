@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import './patient_detail_screen.dart';
 import './call_detail_screen.dart';
-import 'consultation_screen.dart';
-import '../widgets/custom_card.dart';
-import '../widgets/status_chip.dart';
+import '../widgets/call_card.dart';
 
 class CallsScreen extends StatefulWidget {
   const CallsScreen({super.key});
@@ -216,86 +213,12 @@ Widget build(BuildContext context) {
       itemCount: _filteredCalls.length,
       itemBuilder: (context, index) {
         final call = _filteredCalls[index];
-        return _buildCallCard(call);
+        return CallCard(
+          call: call,
+          onTap: () => _openCallDetails(context, call),
+        );
       },
     ),
   );
 }
-
-  Widget _buildCallCard(Map<String, dynamic> call) {
-    final isEmergency = call['status'] == 'ЭКСТРЕННЫЙ';
-    final isCompleted = call['isCompleted'];
-    final completedCount = call['patients'].where((p) => p['hasConclusion'] == true).length;
-    final totalPatients = call['patients'].length;
-
-    return GestureDetector(
-      onTap: () => _openCallDetails(context, call),
-      child: CustomCard(
-        backgroundColor: isCompleted 
-            ? Colors.green[100] 
-            : isEmergency 
-                ? const Color(0xFFFFEBEE).withOpacity(0.7) 
-                : Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  StatusChip(
-                    text: call['status'],
-                    isEmergency: isEmergency,
-                  ),
-                  Text(
-                    call['time'],
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              Text(
-                '${call['address']}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              
-              Row(
-                children: [
-                  Icon(Icons.person_outline, size: 20, color: Theme.of(context).primaryColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Пациенты: $completedCount/$totalPatients завершено',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              
-              Row(
-                children: [
-                  Icon(Icons.local_hospital, size: 20, color: Theme.of(context).primaryColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Врач: ${call['doctor']}',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

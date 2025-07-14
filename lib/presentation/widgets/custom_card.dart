@@ -14,19 +14,16 @@ class CustomCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material( // <-- Добавлено
-      type: MaterialType.transparency,
-      child: Card(
-        margin: margin ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: backgroundColor ?? Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: child,
-        ),
+    return Card(
+      margin: margin ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: backgroundColor ?? Colors.white,
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: child,
       ),
     );
   }

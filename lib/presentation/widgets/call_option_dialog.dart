@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'action_tile.dart';
+import './action_tile.dart';
 
 class CallOptionDialog extends StatelessWidget {
   final Map<String, dynamic> call;

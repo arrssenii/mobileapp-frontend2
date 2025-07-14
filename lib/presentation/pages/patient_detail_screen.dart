@@ -16,37 +16,36 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   final Map<String, TextEditingController> _controllers = {};
   
   @override
-void initState() {
-  super.initState();
-  
-  // Инициализация контроллеров данными пациента
-  _controllers['fullName'] = TextEditingController(
-      text: widget.patient['fullName'] ?? '');
-  _controllers['gender'] = TextEditingController(
-      text: widget.patient['gender'] ?? '');
-  _controllers['birthDate'] = TextEditingController(
-      text: widget.patient['birthDate'] ?? '');
-  _controllers['snils'] = TextEditingController(
-      text: widget.patient['snils'] ?? '');
-  _controllers['oms'] = TextEditingController(
-      text: widget.patient['oms'] ?? '');
-  _controllers['passport'] = TextEditingController(
-      text: widget.patient['passport'] ?? '');
-  _controllers['phone'] = TextEditingController(
-      text: widget.patient['phone'] ?? '');
-  _controllers['email'] = TextEditingController(
-      text: widget.patient['email'] ?? '');
-  _controllers['contraindications'] = TextEditingController(
-      text: widget.patient['contraindications'] ?? '');
-  
-  // Адрес теперь берем из данных пациента
-  _controllers['address'] = TextEditingController(
-      text: widget.patient['address'] ?? '');
-}
+  void initState() {
+    super.initState();
+    _initControllers();
+  }
+
+  void _initControllers() {
+    _controllers['fullName'] = TextEditingController(
+        text: widget.patient['fullName'] ?? '');
+    _controllers['gender'] = TextEditingController(
+        text: widget.patient['gender'] ?? '');
+    _controllers['birthDate'] = TextEditingController(
+        text: widget.patient['birthDate'] ?? '');
+    _controllers['snils'] = TextEditingController(
+        text: widget.patient['snils'] ?? '');
+    _controllers['oms'] = TextEditingController(
+        text: widget.patient['oms'] ?? '');
+    _controllers['passport'] = TextEditingController(
+        text: widget.patient['passport'] ?? '');
+    _controllers['phone'] = TextEditingController(
+        text: widget.patient['phone'] ?? '');
+    _controllers['email'] = TextEditingController(
+        text: widget.patient['email'] ?? '');
+    _controllers['contraindications'] = TextEditingController(
+        text: widget.patient['contraindications'] ?? '');
+    _controllers['address'] = TextEditingController(
+        text: widget.patient['address'] ?? '');
+  }
 
   @override
   void dispose() {
-    // Очищаем контроллеры
     _controllers.values.forEach((controller) => controller.dispose());
     super.dispose();
   }
@@ -75,21 +74,21 @@ void initState() {
               label: 'ФИО',
               value: widget.patient['fullName'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['fullName'],
+              controller: _controllers['fullName']!,
               onChanged: (value) => widget.patient['fullName'] = value,
             ),
             InfoRow(
               label: 'Пол',
               value: widget.patient['gender'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['gender'],
+              controller: _controllers['gender']!,
               onChanged: (value) => widget.patient['gender'] = value,
             ),
             InfoRow(
               label: 'Дата рождения',
               value: widget.patient['birthDate'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['birthDate'],
+              controller: _controllers['birthDate']!,
               onChanged: (value) => widget.patient['birthDate'] = value,
             ),
 
@@ -98,21 +97,21 @@ void initState() {
               label: 'СНИЛС',
               value: widget.patient['snils'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['snils'],
+              controller: _controllers['snils']!,
               onChanged: (value) => widget.patient['snils'] = value,
             ),
             InfoRow(
               label: 'Полис ОМС',
               value: widget.patient['oms'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['oms'],
+              controller: _controllers['oms']!,
               onChanged: (value) => widget.patient['oms'] = value,
             ),
             InfoRow(
               label: 'Паспорт',
               value: widget.patient['passport'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['passport'],
+              controller: _controllers['passport']!,
               onChanged: (value) => widget.patient['passport'] = value,
             ),
 
@@ -121,30 +120,36 @@ void initState() {
               label: 'Телефон',
               value: widget.patient['phone'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['phone'],
+              controller: _controllers['phone']!,
               onChanged: (value) => widget.patient['phone'] = value,
             ),
             InfoRow(
               label: 'Email',
               value: widget.patient['email'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['email'],
+              controller: _controllers['email']!,
               onChanged: (value) => widget.patient['email'] = value,
             ),
             InfoRow(
               label: 'Адрес',
               value: widget.patient['address'] ?? '',
               isEditing: _isEditing,
-              controller: TextEditingController(text: widget.patient['address'] ?? ''),
+              controller: _controllers['address']!,
               onChanged: (value) => widget.patient['address'] = value,
+              maxLines: 2,
             ),
 
             SectionHeader(title: 'Медицинская информация'),
             InfoRow(
+              label: 'Диагноз',
+              value: widget.patient['diagnosis'] ?? 'Не указан',
+              isEditing: false,
+            ),
+            InfoRow(
               label: 'Противопоказания',
               value: widget.patient['contraindications'] ?? '',
               isEditing: _isEditing,
-              controller: _controllers['contraindications'],
+              controller: _controllers['contraindications']!,
               onChanged: (value) => widget.patient['contraindications'] = value,
               maxLines: 3,
             ),
@@ -156,7 +161,6 @@ void initState() {
 
   void _toggleEditMode() {
     if (_isEditing) {
-      // Сохраняем изменения
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Изменения сохранены'),

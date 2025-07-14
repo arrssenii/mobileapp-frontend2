@@ -17,6 +17,7 @@ class StatusChip extends StatelessWidget {
         text,
         style: TextStyle(
           fontWeight: FontWeight.bold,
+          fontSize: 14,
           color: isEmergency 
               ? Colors.red.shade800 
               : Theme.of(context).primaryColor,
@@ -25,6 +26,7 @@ class StatusChip extends StatelessWidget {
       backgroundColor: isEmergency 
           ? Colors.red.shade50 
           : Colors.grey.shade200,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     );
   }
 }

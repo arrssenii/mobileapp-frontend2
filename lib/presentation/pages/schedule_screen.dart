@@ -4,8 +4,8 @@ import 'package:demo_app/presentation/pages/consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
 import '../../data/models/appointment_model.dart';
 import '../widgets/action_tile.dart';
-import '../widgets/appointment_card.dart';
 import '../widgets/date_carousel.dart';
+import '../widgets/responsive_card_list.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -17,7 +17,13 @@ class ScheduleScreen extends StatefulWidget {
 class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _selectedDate = DateTime.now();
   List<Appointment> _appointments = [];
-  // Удалены: _dates, _scrollController
+  
+  Future<void> _refreshAppointments() async {
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() {
+      _loadAppointments();
+    });
+  }
 
   @override
   void initState() {
@@ -55,69 +61,70 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return names[index % names.length];
   }
 
-  void _showAppointmentOptions(BuildContext context, Appointment appointment) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.0),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 16.0,
-              horizontal: 0,
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ActionTile(
-                  icon: Icons.person,
-                  title: 'Информация о пациенте',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _openPatientDetails(context, appointment);
-                  },
-                ),
-                ActionTile(
-                  icon: Icons.medical_services,
-                  title: 'Начать приём',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _openConsultationScreen(context, appointment);
-                  },
-                ),
-                ActionTile(
-                  icon: Icons.close,
-                  title: 'Не явился',
-                  onTap: () {
-                    setState(() {
-                      appointment.status = AppointmentStatus.noShow;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  child: const Text('Отмена', 
-                    style: TextStyle(
-                      color: Color(0xFF8B8B8B),
-                      fontSize: 16,
-                    ),
+  void _showAppointmentOptions(dynamic appointmentData) {
+    final appointment = appointmentData as Appointment;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 16.0,
+                horizontal: 0,
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ActionTile(
+                    icon: Icons.person,
+                    title: 'Информация о пациенте',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openPatientDetails(context, appointment);
+                    },
                   ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+                  ActionTile(
+                    icon: Icons.medical_services,
+                    title: 'Начать приём',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openConsultationScreen(context, appointment);
+                    },
+                  ),
+                  ActionTile(
+                    icon: Icons.close,
+                    title: 'Не явился',
+                    onTap: () {
+                      setState(() {
+                        appointment.status = AppointmentStatus.noShow;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    child: const Text('Отмена', 
+                      style: TextStyle(
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 16,
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   void _openPatientDetails(BuildContext context, Appointment appointment) {
     final patient = {
@@ -170,54 +177,49 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        AppBar(
-          title: Text(
-            'Расписание приёмов',
-            style: TextStyle(color: Color(0xFF8B8B8B)),
+Widget build(BuildContext context) {
+  return Column(
+    children: [
+      AppBar(
+        title: Text(
+          'Расписание приёмов',
+          style: TextStyle(color: Color(0xFF8B8B8B)),
+        ),
+        backgroundColor: const Color(0xFFFFFFFF),
+        actions: [
+          DatePickerIconButton(
+            initialDate: _selectedDate,
+            onDateSelected: _handleDateSelected,
+            tooltip: 'Выбрать дату расписания',
           ),
-          backgroundColor: const Color(0xFFFFFFFF),
-          actions: [
-            DatePickerIconButton(
-              initialDate: _selectedDate,
-              onDateSelected: _handleDateSelected,
-              tooltip: 'Выбрать дату расписания',
-            ),
-          ],
+        ],
+      ),
+      
+      DateCarousel(
+        initialDate: _selectedDate,
+        onDateSelected: (date) {
+          setState(() => _selectedDate = date);
+          _loadAppointments();
+        },
+        daysRange: 30,
+      ),
+      
+      const SizedBox(height: 20),
+      Text(
+        'Расписание на ${_selectedDate.day}.${_selectedDate.month}.${_selectedDate.year}',
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 20),
+      
+      Expanded(
+        child: ResponsiveCardList(
+          type: CardListType.schedule,
+          items: _appointments,
+          onItemTap: (context, item) => _showAppointmentOptions(item),
+          onRefresh: _refreshAppointments,
         ),
-        
-        // Используем новый виджет DateCarousel
-        DateCarousel(
-          initialDate: _selectedDate,
-          onDateSelected: (date) {
-            setState(() {
-              _selectedDate = date;
-            });
-            _loadAppointments();
-          },
-          daysRange: 30, // Увеличили диапазон до 30 дней
-        ),
-        
-        const SizedBox(height: 20),
-        Text(
-          'Расписание на ${_selectedDate.day}.${_selectedDate.month}.${_selectedDate.year}',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _appointments.length,
-            itemBuilder: (context, index) {
-              return AppointmentCard(
-                appointment: _appointments[index],
-                onTap: () => _showAppointmentOptions(context, _appointments[index]),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 }

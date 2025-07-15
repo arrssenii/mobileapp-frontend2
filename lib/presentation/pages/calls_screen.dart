@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import './call_detail_screen.dart';
-import '../widgets/call_card.dart';
+import '../widgets/responsive_card_list.dart';
 
 class CallsScreen extends StatefulWidget {
   const CallsScreen({super.key});
@@ -12,6 +12,13 @@ class CallsScreen extends StatefulWidget {
 class _CallsScreenState extends State<CallsScreen> {
   List<Map<String, dynamic>> _calls = [];
   List<Map<String, dynamic>> _filteredCalls = [];
+
+  Future<void> _refreshCalls() async {
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() {
+      _loadCalls();
+    });
+  }
 
   @override
   void initState() {
@@ -171,20 +178,11 @@ class _CallsScreenState extends State<CallsScreen> {
       });
   }
 
-  void _refreshCalls() {
-    setState(() {
-      _loadCalls();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Список вызовов обновлён')),
-      );
-    });
-  }
-
-  void _openCallDetails(BuildContext context, Map<String, dynamic> call) {
+  void _openCallDetails(dynamic callData) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CallDetailScreen(call: call),
+        builder: (context) => CallDetailScreen(call: callData as Map<String, dynamic>),
       ),
     ).then((_) {
       setState(() {});
@@ -192,14 +190,14 @@ class _CallsScreenState extends State<CallsScreen> {
   }
 
 @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      backgroundColor: const Color(0xFFFFFFFF), // Перенесено в правильное место
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFFFFFF),
       title: Text(
         'Вызовы',
         style: TextStyle(color: Color(0xFF8B8B8B)),
-      ), // Добавлена закрывающая скобка для Text
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
@@ -208,17 +206,13 @@ Widget build(BuildContext context) {
           color: Color(0xFF8B8B8B),
         ),
       ],
-    ),
-    body: ListView.builder(
-      itemCount: _filteredCalls.length,
-      itemBuilder: (context, index) {
-        final call = _filteredCalls[index];
-        return CallCard(
-          call: call,
-          onTap: () => _openCallDetails(context, call),
-        );
-      },
-    ),
-  );
-}
+      ),
+      body: ResponsiveCardList(
+        type: CardListType.calls,
+        items: _filteredCalls,
+        onItemTap: (context, item) => _openCallDetails(item),
+        onRefresh: _refreshCalls, // Передаем функцию обновления
+      ),
+    );
+  }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'patient_detail_screen.dart';
 import 'patient_history_screen.dart';
 import 'add_patient_screen.dart';
-import '../widgets/patient_list.dart'; // Импортируем новый виджет
+import '../widgets/responsive_card_list.dart';
 
 class PatientListScreen extends StatefulWidget {
   const PatientListScreen({super.key});
@@ -14,6 +14,22 @@ class PatientListScreen extends StatefulWidget {
 class _PatientListScreenState extends State<PatientListScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _patients = [];
+
+  List<Map<String, dynamic>> get _filteredPatients {
+    final query = _searchController.text.toLowerCase();
+    if (query.isEmpty) return _patients;
+    
+    return _patients.where((patient) {
+      return patient['fullName'].toLowerCase().contains(query);
+    }).toList();
+  }
+
+  Future<void> _refreshPatients() async {
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() {
+      _loadPatients();
+    });
+  }
 
   @override
   void initState() {
@@ -201,9 +217,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
   void _openPatientDetails(Map<String, dynamic> patient) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => PatientDetailScreen(patient: patient),
-      ),
+      MaterialPageRoute(builder: (context) => PatientDetailScreen(patient: patient)),
     );
   }
 
@@ -232,13 +246,15 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PatientList(
-      patients: _patients,
+    return ResponsiveCardList(
+      type: CardListType.patients,
+      items: _filteredPatients, // используем отфильтрованный список
+      onDetails: (item) => _openPatientDetails(item as Map<String, dynamic>),
+      onHistory: (item) => _openPatientHistory(item as Map<String, dynamic>),
       searchController: _searchController,
-      onPatientDetails: _openPatientDetails,
-      onPatientHistory: _openPatientHistory,
-      onAddPatient: _openAddPatientScreen,
-      onPatientAdded: _addNewPatient,
+      onAdd: _openAddPatientScreen,
+      showSearch: true,
+      onRefresh: _refreshPatients,
     );
   }
 }

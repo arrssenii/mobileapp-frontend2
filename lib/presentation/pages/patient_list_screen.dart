@@ -246,15 +246,65 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveCardList(
-      type: CardListType.patients,
-      items: _filteredPatients, // используем отфильтрованный список
-      onDetails: (item) => _openPatientDetails(item as Map<String, dynamic>),
-      onHistory: (item) => _openPatientHistory(item as Map<String, dynamic>),
-      searchController: _searchController,
-      onAdd: _openAddPatientScreen,
-      showSearch: true,
-      onRefresh: _refreshPatients,
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Пациенты',
+              style: TextStyle(
+                color: Color(0xFF8B8B8B),
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Добавляем панель поиска прямо в AppBar
+            SizedBox(
+              height: 40,
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Поиск пациентов...',
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF8B8B8B)),
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 0),
+                ),
+                onChanged: (value) => setState(() {}),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFFFFFFFF),
+        toolbarHeight: 100, // Увеличиваем высоту AppBar
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshPatients,
+            tooltip: 'Обновить список',
+            color: Color(0xFF8B8B8B),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _openAddPatientScreen,
+            tooltip: 'Добавить пациента',
+            color: Color(0xFF8B8B8B),
+          ),
+        ],
+      ),
+      body: ResponsiveCardList(
+        type: CardListType.patients,
+        items: _filteredPatients,
+        onDetails: (item) => _openPatientDetails(item as Map<String, dynamic>),
+        onHistory: (item) => _openPatientHistory(item as Map<String, dynamic>),
+        onRefresh: _refreshPatients,
+        // Убираем параметры поиска, так как теперь поиск в AppBar
+      ),
     );
   }
 }

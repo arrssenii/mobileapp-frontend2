@@ -176,7 +176,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
   }
 
-  @override
+@override
 Widget build(BuildContext context) {
   return Column(
     children: [
@@ -204,12 +204,16 @@ Widget build(BuildContext context) {
         daysRange: 30,
       ),
       
-      const SizedBox(height: 20),
-      Text(
-        'Расписание на ${_selectedDate.day}.${_selectedDate.month}.${_selectedDate.year}',
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Text(
+          'Расписание на ${_selectedDate.day}.${_selectedDate.month}.${_selectedDate.year}',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
-      const SizedBox(height: 20),
       
       Expanded(
         child: ResponsiveCardList(

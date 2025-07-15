@@ -83,7 +83,7 @@ class ResponsiveCardList extends StatelessWidget {
 
   Widget _buildSearchRow(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(8.0),
       child: Row(
         children: [
           // Поле поиска

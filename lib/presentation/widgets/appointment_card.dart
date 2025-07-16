@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../data/models/appointment_model.dart';
+import 'package:demo_app/data/models/appointment_model.dart'; // Добавлен импорт модели
 
 class AppointmentCard extends StatelessWidget {
   final Appointment appointment;
@@ -52,7 +52,7 @@ class AppointmentCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${appointment.time.hour}:00',
+                          '${appointment.time.hour}:${appointment.time.minute.toString().padLeft(2, '0')}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -61,7 +61,7 @@ class AppointmentCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${appointment.time.hour + 1}:00',
+                          '${appointment.time.hour + 1}:${appointment.time.minute.toString().padLeft(2, '0')}',
                           style: const TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
@@ -84,13 +84,13 @@ class AppointmentCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          'Кабинет ${appointment.cabinet}',
-                          style: const TextStyle(color: Colors.grey),
+                          appointment.diagnosis,
+                          style: const TextStyle(fontSize: 14),
                         ),
                         const SizedBox(height: 5),
-                        const Text(
-                          'Плановый осмотр',
-                          style: TextStyle(fontSize: 14),
+                        Text(
+                          appointment.address,
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ],
                     ),

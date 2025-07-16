@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'patient_detail_screen.dart';
-import 'patient_history_screen.dart';
-import 'add_patient_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl/intl.dart';
+import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
+import 'package:demo_app/presentation/pages/patient_history_screen.dart';
+import 'package:demo_app/presentation/pages/add_patient_screen.dart';
 import '../widgets/responsive_card_list.dart';
 
 class PatientListScreen extends StatefulWidget {
@@ -14,27 +17,104 @@ class PatientListScreen extends StatefulWidget {
 class _PatientListScreenState extends State<PatientListScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _patients = [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
   List<Map<String, dynamic>> get _filteredPatients {
     final query = _searchController.text.toLowerCase();
     if (query.isEmpty) return _patients;
     
     return _patients.where((patient) {
-      return patient['fullName'].toLowerCase().contains(query);
+      return patient['full_name'].toLowerCase().contains(query);
     }).toList();
   }
 
-  Future<void> _refreshPatients() async {
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> _fetchPatients() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final url = Uri.parse('http://192.168.30.106:8080/api/v1/patients/');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+      
+      if (responseData['status'] == 'success') {
+        final List<dynamic> patientsData = responseData['data'];
+        
+        setState(() {
+          _patients = patientsData.map((patient) {
+            return {
+              'id': patient['ID'],
+              'full_name': patient['full_name'], // ключ как в API
+              'is_male': patient['is_male'],
+              'birth_date': patient['birth_date'],
+              // Убрали несуществующие поля
+            };
+          }).toList();
+        });
+      } else {
+        throw Exception('Invalid response status: ${responseData['status']}');
+      }
+    } else {
+      throw Exception('HTTP error ${response.statusCode}');
+    }
+  } catch (e) {
     setState(() {
-      _loadPatients();
+      _errorMessage = 'Ошибка загрузки: ${e.toString()}';
+    });
+  } finally {
+    setState(() {
+      _isLoading = false;
     });
   }
+}
+
+  String _formatBirthDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('dd.MM.yyyy').format(date);
+    } catch (e) {
+      return 'Неизвестно';
+    }
+  }
+
+  String _calculateAge(String birthDate) {
+  try {
+    final birth = DateTime.parse(birthDate);
+    final now = DateTime.now();
+    int age = now.year - birth.year;
+    
+    // Точный расчёт возраста
+    if (now.month < birth.month || 
+        (now.month == birth.month && now.day < birth.day)) {
+      age--;
+    }
+    
+    // Правильное склонение
+    if (age % 10 == 1 && age % 100 != 11) return '$age год';
+    if ((age % 10 >= 2 && age % 10 <= 4) && 
+        (age % 100 < 10 || age % 100 >= 20)) {
+      return '$age года';
+    }
+    return '$age лет';
+  } catch (e) {
+    return 'Неизвестно';
+  }
+}
+
+  Future<void> _refreshPatients() async {
+    await _fetchPatients();
+  }
+  
 
   @override
   void initState() {
     super.initState();
-    _loadPatients();
+    _fetchPatients();
   }
 
   @override
@@ -43,181 +123,59 @@ class _PatientListScreenState extends State<PatientListScreen> {
     super.dispose();
   }
 
-  void _loadPatients() {
-    // Фиктивные данные пациентов
-    _patients = [
-    {
-      'id': 1,
-      'fullName': 'Иванов Иван Иванович',
-      'room': 'Палата 101',
-      'diagnosis': 'Гипертоническая болезнь II ст.',
-      'gender': 'Мужской',
-      'birthDate': '15.03.1965',
-      'snils': '123-456-789 01',
-      'oms': '1234567890123456',
-      'passport': '45 06 123456',
-      'address': 'г. Москва, ул. Ленина, д. 15, кв. 42',
-      'phone': '+7 (999) 123-45-67',
-      'email': 'ivanov@example.com',
-      'contraindications': 'Аллергия на пенициллин',
-      'status': 'stable',
-      'isCritical': false,
-      'lastVisit': '10.05.2023',
-      'bloodType': 'A(II) Rh+',
-    },
-    {
-      'id': 2,
-      'fullName': 'Петрова Анна Сергеевна',
-      'room': 'Палата 205',
-      'diagnosis': 'Сахарный диабет 2 типа',
-      'gender': 'Женский',
-      'birthDate': '22.07.1978',
-      'snils': '234-567-890 12',
-      'oms': '2345678901234567',
-      'passport': '40 07 234567',
-      'address': 'г. Санкт-Петербург, ул. Пушкина, д. 10, кв. 15',
-      'phone': '+7 (911) 234-56-78',
-      'email': 'petrova@example.com',
-      'contraindications': 'Нет',
-      'status': 'stable',
-      'isCritical': false,
-      'lastVisit': '15.05.2023',
-      'bloodType': 'B(III) Rh+',
-    },
-    {
-      'id': 3,
-      'fullName': 'Сидоров Михаил Петрович',
-      'room': 'Палата 102',
-      'diagnosis': 'ХОБЛ, среднетяжелое течение',
-      'gender': 'Мужской',
-      'birthDate': '05.11.1952',
-      'snils': '345-678-901 23',
-      'oms': '3456789012345678',
-      'passport': '41 08 345678',
-      'address': 'г. Новосибирск, ул. Гагарина, д. 5, кв. 33',
-      'phone': '+7 (912) 345-67-89',
-      'email': 'sidorov@example.com',
-      'contraindications': 'Бронхиальная астма',
-      'status': 'pending',
-      'isCritical': true,
-      'lastVisit': '20.05.2023',
-      'bloodType': 'O(I) Rh+',
-    },
-    {
-      'id': 4,
-      'fullName': 'Кузнецова Елена Владимировна',
-      'room': 'Палата 306',
-      'diagnosis': 'Остеоартроз коленных суставов',
-      'gender': 'Женский',
-      'birthDate': '18.09.1960',
-      'snils': '456-789-012 34',
-      'oms': '4567890123456789',
-      'passport': '42 09 456789',
-      'address': 'г. Екатеринбург, ул. Мира, д. 20, кв. 7',
-      'phone': '+7 (913) 456-78-90',
-      'email': 'kuznetsova@example.com',
-      'contraindications': 'Непереносимость НПВС',
-      'status': 'stable',
-      'isCritical': false,
-      'lastVisit': '12.05.2023',
-      'bloodType': 'AB(IV) Rh-',
-    },
-    {
-      'id': 5,
-      'fullName': 'Смирнов Алексей Дмитриевич',
-      'room': 'Палата 103',
-      'diagnosis': 'ИБС, стенокардия напряжения II ФК',
-      'gender': 'Мужской',
-      'birthDate': '30.01.1972',
-      'snils': '567-890-123 45',
-      'oms': '5678901234567890',
-      'passport': '43 10 567890',
-      'address': 'г. Казань, ул. Чехова, д. 12, кв. 24',
-      'phone': '+7 (914) 567-89-01',
-      'email': 'smirnov@example.com',
-      'contraindications': 'Язвенная болезнь желудка',
-      'status': 'critical',
-      'isCritical': true,
-      'lastVisit': '18.05.2023',
-      'bloodType': 'A(II) Rh-',
-    },
-    {
-      'id': 6,
-      'fullName': 'Федорова Ольга Игоревна',
-      'room': 'Палата 207',
-      'diagnosis': 'Хронический пиелонефрит',
-      'gender': 'Женский',
-      'birthDate': '14.05.1985',
-      'snils': '678-901-234 56',
-      'oms': '6789012345678901',
-      'passport': '44 11 678901',
-      'address': 'г. Нижний Новгород, ул. Горького, д. 8, кв. 19',
-      'phone': '+7 (915) 678-90-12',
-      'email': 'fedorova@example.com',
-      'contraindications': 'Хроническая почечная недостаточность',
-      'status': 'stable',
-      'isCritical': false,
-      'lastVisit': '22.05.2023',
-      'bloodType': 'B(III) Rh-',
-    },
-    {
-      'id': 7,
-      'fullName': 'Попов Денис Александрович',
-      'room': 'Палата 104',
-      'diagnosis': 'Язвенная болезнь 12-перстной кишки',
-      'gender': 'Мужской',
-      'birthDate': '27.12.1979',
-      'snils': '789-012-345 67',
-      'oms': '7890123456789012',
-      'passport': '45 12 789012',
-      'address': 'г. Самара, ул. Куйбышева, д. 25, кв. 11',
-      'phone': '+7 (916) 789-01-23',
-      'email': 'popov@example.com',
-      'contraindications': 'Аллергия на метронидазол',
-      'status': 'pending',
-      'isCritical': false,
-      'lastVisit': '25.05.2023',
-      'bloodType': 'O(I) Rh-',
-    },
-    {
-      'id': 8,
-      'fullName': 'Волкова Татьяна Николаевна',
-      'room': 'Палата 308',
-      'diagnosis': 'Бронхиальная астма, атопическая',
-      'gender': 'Женский',
-      'birthDate': '03.08.1992',
-      'snils': '890-123-456 78',
-      'oms': '8901234567890123',
-      'passport': '46 13 890123',
-      'address': 'г. Ростов-на-Дону, ул. Садовая, д. 3, кв. 5',
-      'phone': '+7 (917) 890-12-34',
-      'email': 'volkova@example.com',
-      'contraindications': 'Поливалентная лекарственная аллергия',
-      'status': 'critical',
-      'isCritical': true,
-      'lastVisit': '28.05.2023',
-      'bloodType': 'AB(IV) Rh+',
-    }
-  ];
-}
-
-  void _addNewPatient(Map<String, dynamic> patientData) {
+  void _addNewPatient(Map<String, dynamic> patientData) async {
     setState(() {
-      _patients.add({
-        'id': _patients.length + 1,
-        'fullName': patientData['fullName'] ?? 'Новый пациент',
-        'room': 'Палата не назначена',
-        'diagnosis': 'Диагноз не установлен',
-        'status': 'stable',
-        'isCritical': false,
-      });
+      _isLoading = true;
     });
+
+    try {
+      final url = Uri.parse('http://192.168.30.106:8080/api/v1/patients/');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+        'full_name': patientData['fullName'], // исправлено на snake_case
+        'birth_date': patientData['birthDate'],
+        'is_male': patientData['gender'] == 'Мужской',
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        await _fetchPatients(); // Обновляем список после добавления
+      } else {
+        throw Exception('Ошибка при добавлении пациента');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка добавления: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _openPatientDetails(Map<String, dynamic> patient) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => PatientDetailScreen(patient: patient)),
+      MaterialPageRoute(
+        builder: (context) => PatientDetailScreen(
+          patient: {
+            ...patient,
+            'contact_info': {
+              'phone': 'Не указан',
+              'email': 'Не указан',
+              'address': 'Не указан',
+            },
+            'personal_info': {
+              'snils': 'Не указан',
+              'oms': 'Не указан',
+              'passport': 'Не указан',
+            },
+          },
+        ),
+      ),
     );
   }
 
@@ -244,67 +202,61 @@ class _PatientListScreenState extends State<PatientListScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Пациенты',
-              style: TextStyle(
-                color: Color(0xFF8B8B8B),
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 4),
-            // Добавляем панель поиска прямо в AppBar
-            SizedBox(
-              height: 40,
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Поиск пациентов...',
-                  prefixIcon: Icon(Icons.search, color: Color(0xFF8B8B8B)),
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 0),
-                ),
-                onChanged: (value) => setState(() {}),
-              ),
-            ),
-          ],
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text(
+        'Пациенты',
+        style: TextStyle(color: Color(0xFF8B8B8B)),
+        ), // упрощенный заголовок
+      backgroundColor: const Color(0xFFFFFFFF),
+      toolbarHeight: 60, // уменьшенная высота
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh, color: Color(0xFF8B8B8B)), // Серый цвет
+          onPressed: _refreshPatients,
+          tooltip: 'Обновить список',
         ),
-        backgroundColor: const Color(0xFFFFFFFF),
-        toolbarHeight: 100, // Увеличиваем высоту AppBar
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshPatients,
-            tooltip: 'Обновить список',
-            color: Color(0xFF8B8B8B),
+        IconButton(
+          icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)), // Серый цвет
+          onPressed: _openAddPatientScreen,
+          tooltip: 'Добавить пациента',
+        ),
+      ],
+    ),
+      body: _isLoading
+    ? const Center(child: CircularProgressIndicator())
+    : _errorMessage != null
+        ? Center(child: Text('Ошибка: $_errorMessage'))
+        : Column(
+            children: [
+              // Поле поиска
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Поиск пациентов...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                  ),
+                  onChanged: (value) => setState(() {}),
+                ),
+              ),
+              Expanded(
+                child: ResponsiveCardList(
+                  type: CardListType.patients,
+                  items: _filteredPatients,
+                  onDetails: (item) => _openPatientDetails(item as Map<String, dynamic>),
+                  onHistory: (item) => _openPatientHistory(item as Map<String, dynamic>),
+                  onRefresh: _refreshPatients,
+                ),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _openAddPatientScreen,
-            tooltip: 'Добавить пациента',
-            color: Color(0xFF8B8B8B),
-          ),
-        ],
-      ),
-      body: ResponsiveCardList(
-        type: CardListType.patients,
-        items: _filteredPatients,
-        onDetails: (item) => _openPatientDetails(item as Map<String, dynamic>),
-        onHistory: (item) => _openPatientHistory(item as Map<String, dynamic>),
-        onRefresh: _refreshPatients,
-        // Убираем параметры поиска, так как теперь поиск в AppBar
-      ),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_card.dart';
-import '../widgets/action_tile.dart';
+import 'custom_card.dart';
+import 'action_tile.dart';
 
 class PatientCard extends StatelessWidget {
   final Map<String, dynamic> patient;
@@ -24,68 +24,55 @@ class PatientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell( // <-- Добавлено
+    return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: isSelectable ? () => _showOptions(context) : null,
       child: Stack(
         children: [
           CustomCard(
-          backgroundColor: isSelected 
-              ? Theme.of(context).primaryColor.withOpacity(0.1)
-              : backgroundColor ?? Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        patient['fullName'] ?? 'Неизвестный пациент',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+            backgroundColor: isSelected 
+                ? Theme.of(context).primaryColor.withOpacity(0.1)
+                : backgroundColor ?? Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          patient['full_name'] ?? 'Неизвестный пациент', // исправлено
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                    if (patient['isCritical'] == true)
-                      const Icon(Icons.warning, color: Colors.red),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _buildInfoRow(Icons.bed, patient['room'] ?? 'Палата не указана'),
-                    const SizedBox(width: 20),
-                    _buildInfoRow(
-                      Icons.medical_services, 
-                      patient['diagnosis'] ?? 'Диагноз не указан'
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (showStatusIndicator && patient['status'] != null)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: _getStatusColor(patient['status']),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white,
-                  width: 1.5,
-                ),
+                      // Убрали иконку критичности (нет данных)
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Исправленный блок с данными - вертикальное расположение
+                  _buildInfoRow(
+                    patient['is_male'] == true 
+                        ? Icons.male 
+                        : Icons.female,
+                    patient['is_male'] ? 'Мужчина' : 'Женщина', // добавлено
+                  ),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(
+                    Icons.calendar_today,
+                    _formatBirthDate(patient['birth_date']), // форматирование даты
+                  ),
+                  // Убрали блок с диагнозом (нет данных)
+                ],
               ),
             ),
           ),
+          // Убрали индикатор статуса (нет данных)
         ],
       ),
     );
@@ -105,21 +92,28 @@ class PatientCard extends StatelessWidget {
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
-    return Expanded(
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: const Color(0xFF8B8B8B)),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 16),
-              overflow: TextOverflow.ellipsis,
-            ),
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF8B8B8B)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 16),
+            overflow: TextOverflow.ellipsis,
           ),
-        ],
-      ),
+        ),
+      ],
     );
+  }
+
+  String _formatBirthDate(String birthDate) {
+    try {
+      final date = DateTime.parse(birthDate);
+      return '${date.day}.${date.month}.${date.year}';
+    } catch (e) {
+      return 'Дата рождения неизвестна';
+    }
   }
 
   void _showOptions(BuildContext context) {

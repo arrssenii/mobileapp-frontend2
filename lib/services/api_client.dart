@@ -52,9 +52,37 @@ class ApiClient {
 
   // Аутентификация
   Future<Map<String, dynamic>> loginDoctor(Map<String, dynamic> credentials) async {
-    final response = await _dio.post('/auth/login', data: credentials);
-    return response.data;
+  try {
+    final response = await _dio.post(
+      '/auth',
+      data: credentials,
+      options: Options(
+        contentType: Headers.jsonContentType,
+        validateStatus: (status) => status! < 500,
+      ),
+    );
+    
+    if (response.statusCode == 200) {
+      return response.data;
+    } else {
+      throw ApiError(
+        statusCode: response.statusCode,
+        message: response.data['message'] ?? 'Ошибка авторизации',
+        rawError: response.data,
+      );
+    }
+  } on DioException catch (e) {
+    if (e.response != null) {
+      throw ApiError(
+        statusCode: e.response!.statusCode,
+        message: e.response!.data['message'] ?? e.message,
+        rawError: e.response!.data,
+      );
+    } else {
+      throw ApiError(message: e.message ?? 'Сетевая ошибка');
+    }
   }
+}
 
   // Медкарта пациента
   Future<Map<String, dynamic>> getMedCardByPatientId(String patId) async {

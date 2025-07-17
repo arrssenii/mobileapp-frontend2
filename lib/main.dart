@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'services/api_client.dart';
+import 'package:dio/dio.dart';
 
 // Domain Layer
 import 'domain/usecases/login_usecase.dart';
@@ -24,19 +26,25 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final authRepository = AuthRepositoryImpl(
-      remoteDataSource: AuthRemoteDataSourceImpl(),
-    );
-    
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => LoginBloc(
-            loginUseCase: LoginUseCase(authRepository),
-          ),
+Widget build(BuildContext context) {
+  // Создаем экземпляр ApiClient
+  final apiClient = ApiClient();
+  
+  // Передаем apiClient в AuthRemoteDataSourceImpl
+  final authRemoteDataSource = AuthRemoteDataSourceImpl(apiClient: apiClient);
+  
+  final authRepository = AuthRepositoryImpl(
+    remoteDataSource: authRemoteDataSource,
+  );
+  
+  return MultiBlocProvider(
+    providers: [
+      BlocProvider(
+        create: (context) => LoginBloc(
+          loginUseCase: LoginUseCase(authRepository),
         ),
-      ],
+      ),
+    ],
       child: MaterialApp(
         title: 'Медицинская информационная система',
         debugShowCheckedModeBanner: false,
@@ -117,16 +125,32 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Реализация удаленного источника данных
+// main.dart (измененная реализация AuthRemoteDataSourceImpl)
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+  final ApiClient apiClient;
+
+  AuthRemoteDataSourceImpl({required this.apiClient});
+
   @override
   Future<UserModel> login(String username, String password) async {
-    await Future.delayed(const Duration(seconds: 1));
-    
-    if (username == 'admin' && password == '123456') {
-      return UserModel(token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
-    } else {
-      throw Exception('Неверные учетные данные');
+    try {
+      final response = await apiClient.loginDoctor({
+        'username': username,
+        'password': password,
+      });
+      
+      // Проверка структуры ответа
+      if (response.containsKey('token')) {
+        return UserModel(token: response['token']);
+      } else {
+        throw Exception('Неверный формат ответа сервера: отсутствует токен');
+      }
+    } on DioException catch (e) {
+      throw Exception('Ошибка сети: ${e.message}');
+    } on ApiError catch (e) {
+      throw Exception(e.message);
+    } catch (e) {
+      throw Exception('Неизвестная ошибка: ${e.toString()}');
     }
   }
 }

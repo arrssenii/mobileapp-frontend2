@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:intl/intl.dart';
 import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
 import 'package:demo_app/presentation/pages/patient_history_screen.dart';
 import 'package:demo_app/presentation/pages/add_patient_screen.dart';
@@ -70,39 +69,6 @@ class _PatientListScreenState extends State<PatientListScreen> {
     setState(() {
       _isLoading = false;
     });
-  }
-}
-
-  String _formatBirthDate(String dateString) {
-    try {
-      final date = DateTime.parse(dateString);
-      return DateFormat('dd.MM.yyyy').format(date);
-    } catch (e) {
-      return 'Неизвестно';
-    }
-  }
-
-  String _calculateAge(String birthDate) {
-  try {
-    final birth = DateTime.parse(birthDate);
-    final now = DateTime.now();
-    int age = now.year - birth.year;
-    
-    // Точный расчёт возраста
-    if (now.month < birth.month || 
-        (now.month == birth.month && now.day < birth.day)) {
-      age--;
-    }
-    
-    // Правильное склонение
-    if (age % 10 == 1 && age % 100 != 11) return '$age год';
-    if ((age % 10 >= 2 && age % 10 <= 4) && 
-        (age % 100 < 10 || age % 100 >= 20)) {
-      return '$age года';
-    }
-    return '$age лет';
-  } catch (e) {
-    return 'Неизвестно';
   }
 }
 

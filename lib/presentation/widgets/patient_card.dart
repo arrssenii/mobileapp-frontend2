@@ -78,19 +78,6 @@ class PatientCard extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'critical':
-        return Colors.red;
-      case 'stable':
-        return Colors.green;
-      case 'pending':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [

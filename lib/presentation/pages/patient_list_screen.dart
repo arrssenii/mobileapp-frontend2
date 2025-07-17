@@ -42,16 +42,25 @@ class _PatientListScreenState extends State<PatientListScreen> {
       final Map<String, dynamic> responseData = json.decode(response.body);
       
       if (responseData['status'] == 'success') {
-        final List<dynamic> patientsData = responseData['data'];
-        
+        dynamic data = responseData['data'];
+        List<dynamic> patientsData = [];
+
+        // Обработка разных форматов ответа
+        if (data is List) {
+          patientsData = data;
+        } else if (data is Map<String, dynamic>) {
+          patientsData = [data];
+        } else {
+          throw Exception('Unexpected data type: ${data.runtimeType}');
+        }
+
         setState(() {
           _patients = patientsData.map((patient) {
             return {
-              'id': patient['ID'],
-              'full_name': patient['full_name'], // ключ как в API
-              'is_male': patient['is_male'],
-              'birth_date': patient['birth_date'],
-              // Убрали несуществующие поля
+              'id': patient['ID'] ?? 0,
+              'full_name': patient['full_name'] ?? 'Без имени',
+              'is_male': patient['is_male'] ?? false, // Обрабатываем null
+              'birth_date': patient['birth_date'] ?? '',
             };
           }).toList();
         });
@@ -100,9 +109,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-        'full_name': patientData['fullName'], // исправлено на snake_case
-        'birth_date': patientData['birthDate'],
-        'is_male': patientData['gender'] == 'Мужской',
+          'full_name': patientData['fullName'], // snake_case
+          'birth_date': patientData['birthDate'],
+          'is_male': patientData['gender'] == 'Мужской',
         }),
       );
 
@@ -151,7 +160,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
       MaterialPageRoute(
         builder: (context) => PatientHistoryScreen(
           patientId: patient['id'],
-          patientName: patient['fullName'],
+          patientName: patient['full_name'], // Исправлено на snake_case
         ),
       ),
     );

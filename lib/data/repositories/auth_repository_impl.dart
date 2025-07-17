@@ -12,19 +12,4 @@ class AuthRepositoryImpl implements AuthRepository {
     final userModel = await remoteDataSource.login(username, password);
     return userModel; // UserModel наследуется от User, поэтому преобразование не нужно
   }
-
-  @override
-  Future<void> register({
-    required String fullName,
-    required String specialty,
-    required String username,
-    required String password,
-  }) async {
-    await remoteDataSource.register({
-      'fullName': fullName,
-      'specialty': specialty,
-      'username': username,
-      'password': password,
-    });
-  }
 }

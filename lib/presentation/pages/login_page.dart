@@ -76,15 +76,6 @@ class LoginPage extends StatelessWidget {
                           ? const CircularProgressIndicator()
                           : const Text('Вход', style: TextStyle(fontSize: 18)),
                     ),
-                    const SizedBox(height: 20),
-                    
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/register'),
-                      child: const Text(
-                        'Регистрация',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
                   ],
                 ),
               ),

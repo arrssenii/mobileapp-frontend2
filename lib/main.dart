@@ -12,9 +12,9 @@ import 'data/repositories/auth_repository_impl.dart';
 // Presentation Layer
 import 'presentation/pages/login_page.dart';
 import 'presentation/pages/main_screen.dart';
-import 'presentation/pages/register_page.dart'; // Добавлен импорт
+
+ // Добавлен импорт
 import 'presentation/bloc/login_bloc.dart';
-import 'presentation/bloc/register_bloc.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,11 +34,6 @@ class MyApp extends StatelessWidget {
         BlocProvider(
           create: (context) => LoginBloc(
             loginUseCase: LoginUseCase(authRepository),
-          ),
-        ),
-        BlocProvider(
-          create: (context) => RegisterBloc(
-            repository: authRepository,
           ),
         ),
       ],
@@ -116,7 +111,6 @@ class MyApp extends StatelessWidget {
         home: LoginPage(),
         routes: {
           '/main': (context) => const MainScreen(),
-          '/register': (context) => const RegisterPage(),
         },
       ),
     );
@@ -134,16 +128,5 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } else {
       throw Exception('Неверные учетные данные');
     }
-  }
-
-  @override
-  Future<void> register(Map<String, dynamic> userData) async {
-    await Future.delayed(const Duration(seconds: 1));
-    
-    if (userData['username'] == 'admin') {
-      throw Exception('Пользователь с таким логином уже существует');
-    }
-    
-    print('Регистрация пользователя: $userData');
   }
 }

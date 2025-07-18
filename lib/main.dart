@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'services/api_client.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dio/dio.dart';
 
 // Domain Layer
 import 'domain/usecases/login_usecase.dart';
+import 'domain/repositories/auth_repository.dart';
 
 // Data Layer
 import 'data/datasources/auth_remote_data_source.dart';
@@ -12,44 +15,59 @@ import 'data/models/user_model.dart';
 import 'data/repositories/auth_repository_impl.dart';
 
 // Presentation Layer
-import 'presentation/pages/login_page.dart';
+import 'presentation/pages/login_screen.dart';
 import 'presentation/pages/main_screen.dart';
-
- // Добавлен импорт
 import 'presentation/bloc/login_bloc.dart';
 
-void main() {
-  runApp(const MyApp());
+// Services
+import 'services/auth_service.dart'; // Добавляем импорт AuthService
+import 'services/api_client.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  SharedPreferences? prefs;
+  if (kIsWeb) {
+    prefs = await SharedPreferences.getInstance();
+  }
+
+  final authService = AuthService(prefs);
+  final apiClient = ApiClient(authService);
+  final authRemoteDataSource = AuthRemoteDataSourceImpl(apiClient: apiClient);
+  final authRepository = AuthRepositoryImpl(remoteDataSource: authRemoteDataSource);
+  
+  runApp(MyApp(
+    apiClient: apiClient,
+    authRepository: authRepository,
+  ));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final ApiClient apiClient;
+  final AuthRepository authRepository;
+  
+  const MyApp({
+    super.key,
+    required this.apiClient,
+    required this.authRepository,
+  });
 
   @override
-Widget build(BuildContext context) {
-  // Создаем экземпляр ApiClient
-  final apiClient = ApiClient();
-  
-  // Передаем apiClient в AuthRemoteDataSourceImpl
-  final authRemoteDataSource = AuthRemoteDataSourceImpl(apiClient: apiClient);
-  
-  final authRepository = AuthRepositoryImpl(
-    remoteDataSource: authRemoteDataSource,
-  );
-  
-  return MultiBlocProvider(
-    providers: [
-      BlocProvider(
-        create: (context) => LoginBloc(
-          loginUseCase: LoginUseCase(authRepository),
+  Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: [
+        Provider.value(value: apiClient),
+        BlocProvider(
+          create: (context) => LoginBloc(
+            loginUseCase: LoginUseCase(authRepository),
+          ),
         ),
-      ),
-    ],
+      ],
       child: MaterialApp(
         title: 'Медицинская информационная система',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primaryColor: const Color(0xFF8B8B8B), // Серый
+          primaryColor: const Color(0xFF8B8B8B),
           colorScheme: ColorScheme.fromSwatch(
             primarySwatch: const MaterialColor(0xFF8B8B8B, {
               50: Color(0xFFF2F2F2),
@@ -63,8 +81,8 @@ Widget build(BuildContext context) {
               800: Color(0xFF454545),
               900: Color(0xFF2E2E2E),
             }),
-            accentColor: const Color(0xFFD2B48C), // Бежевый
-            backgroundColor: const Color(0xFFF5F5F5), // Светло-серый фон
+            accentColor: const Color(0xFFD2B48C),
+            backgroundColor: const Color(0xFFF5F5F5),
           ),
           scaffoldBackgroundColor: const Color(0xFFF5F5F5),
           appBarTheme: const AppBarTheme(
@@ -87,7 +105,7 @@ Widget build(BuildContext context) {
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               foregroundColor: Colors.white,
-              backgroundColor: const Color(0xFF8B8B8B), // Серый
+              backgroundColor: const Color(0xFF8B8B8B),
               textStyle: const TextStyle(fontSize: 18),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -97,12 +115,12 @@ Widget build(BuildContext context) {
           ),
           textButtonTheme: TextButtonThemeData(
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF8B8B8B), // Серовый
+              foregroundColor: const Color(0xFF8B8B8B),
             ),
           ),
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: const Color(0xFF8B8B8B), // Серый
-            selectedItemColor: const Color(0xFFD2B48C), // Бежевый
+            backgroundColor: const Color(0xFF8B8B8B),
+            selectedItemColor: const Color(0xFFD2B48C),
             unselectedItemColor: Colors.white70,
             showUnselectedLabels: true,
             type: BottomNavigationBarType.fixed,
@@ -116,7 +134,22 @@ Widget build(BuildContext context) {
             ),
           ),
         ),
-        home: LoginPage(),
+        home: FutureBuilder<String?>(
+          future: apiClient.getToken(), // Используем существующий экземпляр apiClient
+          builder: (context, snapshot) {
+            // Пока идет проверка токена
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            
+            // Если токен получен - MainScreen, иначе LoginPage
+            return snapshot.hasData && snapshot.data != null
+                ? const MainScreen()
+                : LoginScreen();
+          },
+        ),
         routes: {
           '/main': (context) => const MainScreen(),
         },

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
+
+import 'main_screen.dart';
 
 import '../bloc/login_bloc.dart';
+import '../../services/api_client.dart'; // Добавляем импорт ApiClient
 
-class LoginPage extends StatelessWidget {
+class LoginScreen extends StatelessWidget {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  LoginPage({super.key});
+  LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +19,15 @@ class LoginPage extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: BlocConsumer<LoginBloc, LoginState>(
-          listener: (context, state) {
+          listener: (context, state) async {
             if (state is LoginSuccess) {
-              Navigator.of(context).pushReplacementNamed('/main');
+              await _loadDoctorData(context);
+              
+              // Переходим напрямую на MainScreen
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const MainScreen()),
+              );
             }
             if (state is LoginError) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -85,4 +95,30 @@ class LoginPage extends StatelessWidget {
       ),
     );
   }
+  
+  // Загрузка данных доктора после успешной аутентификации
+  Future<void> _loadDoctorData(BuildContext context) async {
+  try {
+    final apiClient = Provider.of<ApiClient>(context, listen: false);
+    const doctorId = '1';
+    
+    final doctorData = await apiClient.getDoctorById(doctorId);
+    
+    // Проверяем наличие ID
+    if (doctorData['id'] == null) {
+      throw Exception('Сервер не вернул ID доктора');
+    }
+    
+    apiClient.setCurrentDoctor(doctorData);
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Ошибка загрузки данных доктора: ${e.toString()}')),
+    );
+    
+    // Дополнительное логирование
+    debugPrint('❌ Ошибка загрузки данных доктора: ${e.toString()}');
+  }
+}
 }

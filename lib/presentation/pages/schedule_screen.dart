@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:demo_app/services/api_client.dart'; // Добавлен импорт
 import 'package:demo_app/data/models/appointment_model.dart';
 import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
@@ -20,43 +21,84 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   List<Appointment> _appointments = [];
   bool _isLoading = false;
   String? _errorMessage;
-  final ApiClient _apiClient = ApiClient(); // Создаем экземпляр ApiClient
+  late ApiClient _apiClient; // Изменяем на late
+  bool _isInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    if (!_isInitialized) {
+      _apiClient = Provider.of<ApiClient>(context, listen: false);
+      _isInitialized = true;
+      _loadAppointments();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   Future<void> _loadAppointments() async {
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
+    // Проверяем инициализацию доктора
+    if (_apiClient.currentDoctor == null) {
+      setState(() {
+        _errorMessage = 'Данные доктора не загружены';
+        _isLoading = false;
+      });
+      return;
+    }
+    
+    // Получаем ID доктора
+    final doctorId = _apiClient.currentDoctor!['id']?.toString();
+    
+    if (doctorId == null) {
+      setState(() {
+        _errorMessage = 'ID доктора не установлен';
+        _isLoading = false;
+      });
+      return;
+    }
 
-  try {
-    final hits = await _apiClient.getReceptionsHospitalByDoctorAndDate(
-      '1', // ID доктора
-      date: _selectedDate,
-      page: 1,
-    );
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    setState(() {
-      _appointments = hits.map((hit) {
-        return Appointment(
-          id: hit['id'] ?? 0,
-          patientName: hit['patient_name'] ?? 'Неизвестный пациент',
-          diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
-          address: hit['address'] ?? 'Адрес не указан',
-          time: _parseDateTime(hit['date']),
-          status: _parseStatus(hit['status'] ?? 'Запланирован'),
-        );
-      }).toList();
-    });
-  } on ApiError catch (e) {
-    setState(() {
-      _errorMessage = 'Ошибка загрузки: ${e.message}';
-    });
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
+    try {
+      final hits = await _apiClient.getReceptionsHospitalByDoctorAndDate(
+        doctorId,
+        date: _selectedDate,
+        page: 1,
+      );
+
+      setState(() {
+        _appointments = hits.map((hit) {
+          return Appointment(
+            id: hit['id'] ?? 0,
+            patientName: hit['patient_name'] ?? 'Неизвестный пациент',
+            diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
+            address: hit['address'] ?? 'Адрес не указан',
+            time: _parseDateTime(hit['date']),
+            status: _parseStatus(hit['status'] ?? 'Запланирован'),
+          );
+        }).toList();
+      });
+    } on ApiError catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка загрузки: ${e.message}';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
 
   AppointmentStatus _parseStatus(String status) {
     switch (status) {
@@ -93,12 +135,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return DateTime.now();
   }
 }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAppointments();
-  }
 
   void _handleDateSelected(DateTime date) {
     setState(() {

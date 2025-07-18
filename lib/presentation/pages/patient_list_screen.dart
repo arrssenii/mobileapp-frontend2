@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:demo_app/services/api_client.dart'; // Добавлен импорт
 import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
 import 'package:demo_app/presentation/pages/patient_history_screen.dart';
@@ -17,7 +18,19 @@ class _PatientListScreenState extends State<PatientListScreen> {
   List<Map<String, dynamic>> _patients = [];
   bool _isLoading = false;
   String? _errorMessage;
-  final ApiClient _apiClient = ApiClient(); // Создаем экземпляр ApiClient
+  late ApiClient _apiClient; // Изменяем на late
+  bool _isInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    if (!_isInitialized) {
+      _apiClient = Provider.of<ApiClient>(context, listen: false);
+      _isInitialized = true;
+      _fetchPatients();
+    }
+  }
 
   List<Map<String, dynamic>> get _filteredPatients {
     final query = _searchController.text.toLowerCase();
@@ -65,7 +78,6 @@ class _PatientListScreenState extends State<PatientListScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchPatients();
   }
 
   @override

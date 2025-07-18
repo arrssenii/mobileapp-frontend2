@@ -1,13 +1,15 @@
 import 'package:dio/dio.dart';
+import 'auth_service.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiClient {
   late Dio _dio;
   String? _authToken;
+  final AuthService _authService;
 
   final String baseUrl = 'http://192.168.30.106:8080/api/v1';
 
-  ApiClient() {
+  ApiClient(this._authService) {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -16,6 +18,7 @@ class ApiClient {
       ),
     );
     _setupInterceptors();
+    _loadToken();
   }
 
   void setAuthToken(String token) {
@@ -60,6 +63,17 @@ class ApiClient {
     );
   }
 
+  Future<void> _loadToken() async {
+    _authToken = await _authService.getToken();
+    if (_authToken != null) {
+      _dio.options.headers['Authorization'] = 'Bearer $_authToken';
+    }
+  }
+
+  Future<String?> getToken() async {
+    return await _authService.getToken();
+  }
+
   // Аутентификация
   Future<Map<String, dynamic>> loginDoctor(Map<String, dynamic> credentials) async {
     try {
@@ -73,9 +87,11 @@ class ApiClient {
       );
       
       if (response.statusCode == 200) {
-        // Сохраняем токен при успешной аутентификации
+        // Сохраняем токен
         if (response.data['token'] != null) {
-          setAuthToken(response.data['token']);
+          _authToken = response.data['token'];
+          await _authService.saveToken(_authToken!);
+          _dio.options.headers['Authorization'] = 'Bearer $_authToken';
         }
         return response.data;
       } else {
@@ -91,12 +107,80 @@ class ApiClient {
   }
 
   // Доктора
+  Map<String, dynamic>? _currentDoctor;
+  
+  Map<String, dynamic>? get currentDoctor => _currentDoctor;
+  
+  void setCurrentDoctor(Map<String, dynamic> doctorData) {
+  _currentDoctor = doctorData;
+  
+  // Детальное логирование
+  debugPrint('Доктор установлен: ${doctorData.toString()}');
+  
+  if (doctorData['id'] == null) {
+    debugPrint('⚠️ Внимание: ID доктора не получен!');
+    debugPrint('Структура ответа:');
+    doctorData.forEach((key, value) {
+      debugPrint('$key: ${value.toString()}');
+    });
+  } else {
+    debugPrint('✅ Доктор установлен: ID=${doctorData['id']}');
+  }
+}
+  
+  // Добавляем метод для загрузки данных доктора
   Future<Map<String, dynamic>> getDoctorById(String docId) async {
   return _handleApiCall(
-    () => _dio.get('/doctors/$docId').then((response) => response.data as Map<String, dynamic>),
+    () async {
+      final response = await _dio.get('/doctors/$docId');
+      
+      if (response.statusCode != 200) {
+        throw ApiError(
+          statusCode: response.statusCode,
+          message: 'Ошибка сервера: ${response.statusCode}',
+          rawError: response.data,
+        );
+      }
+      
+      // Проверяем структуру ответа
+      if (response.data is! Map<String, dynamic>) {
+        throw ApiError(
+          message: 'Неверный формат ответа',
+          rawError: response.data,
+        );
+      }
+      
+      final responseData = response.data as Map<String, dynamic>;
+      
+      // Проверяем наличие поля "data"
+      if (!responseData.containsKey('data')) {
+        throw ApiError(
+          message: 'Ответ не содержит данных доктора',
+          rawError: responseData,
+        );
+      }
+      
+      // Проверяем тип данных в "data"
+      if (responseData['data'] is! Map<String, dynamic>) {
+        throw ApiError(
+          message: 'Неверный формат данных доктора',
+          rawError: responseData,
+        );
+      }
+      
+      return responseData['data'] as Map<String, dynamic>;
+    },
     errorMessage: 'Ошибка получения данных доктора',
   );
 }
+  
+  // Добавляем метод для получения данных текущего пользователя (если есть такой эндпоинт)
+  Future<Map<String, dynamic>> getCurrentUser() async {
+    return _handleApiCall(
+      () => _dio.get('/users/me').then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка получения данных пользователя',
+    );
+  }
 
   Future<Map<String, dynamic>> updateDoctor(String docId, Map<String, dynamic> data) async {
     return _handleApiCall(
@@ -143,6 +227,12 @@ class ApiClient {
       () => _dio.delete('/patients/$patId'),
       errorMessage: 'Ошибка удаления пациента',
     );
+  }
+
+  Future<void> logout() async {
+    await _authService.deleteToken();
+    _authToken = null;
+    _dio.options.headers.remove('Authorization');
   }
 
   // Медкарты

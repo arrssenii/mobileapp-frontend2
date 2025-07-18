@@ -112,17 +112,18 @@ class ApiClient {
   Map<String, dynamic>? get currentDoctor => _currentDoctor;
   
   void setCurrentDoctor(Map<String, dynamic> doctorData) {
+  // Нормализуем ID
+  if (doctorData['id'] != null) {
+    if (doctorData['id'] is String) {
+      doctorData['id'] = int.tryParse(doctorData['id']) ?? doctorData['id'];
+    }
+  }
+  
   _currentDoctor = doctorData;
   
-  // Детальное логирование
-  debugPrint('Доктор установлен: ${doctorData.toString()}');
-  
+  // Логирование
   if (doctorData['id'] == null) {
     debugPrint('⚠️ Внимание: ID доктора не получен!');
-    debugPrint('Структура ответа:');
-    doctorData.forEach((key, value) {
-      debugPrint('$key: ${value.toString()}');
-    });
   } else {
     debugPrint('✅ Доктор установлен: ID=${doctorData['id']}');
   }
@@ -152,23 +153,16 @@ class ApiClient {
       
       final responseData = response.data as Map<String, dynamic>;
       
-      // Проверяем наличие поля "data"
-      if (!responseData.containsKey('data')) {
-        throw ApiError(
-          message: 'Ответ не содержит данных доктора',
-          rawError: responseData,
-        );
+      final doctorData = responseData['data'] as Map<String, dynamic>;
+      
+      // Нормализуем ID доктора
+      if (doctorData.containsKey('id')) {
+        if (doctorData['id'] is String) {
+          doctorData['id'] = int.tryParse(doctorData['id']) ?? doctorData['id'];
+        }
       }
       
-      // Проверяем тип данных в "data"
-      if (responseData['data'] is! Map<String, dynamic>) {
-        throw ApiError(
-          message: 'Неверный формат данных доктора',
-          rawError: responseData,
-        );
-      }
-      
-      return responseData['data'] as Map<String, dynamic>;
+      return doctorData;
     },
     errorMessage: 'Ошибка получения данных доктора',
   );

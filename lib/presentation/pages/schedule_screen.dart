@@ -41,25 +41,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Future<void> _loadAppointments() async {
-    // Проверяем инициализацию доктора
-    if (_apiClient.currentDoctor == null) {
-      setState(() {
-        _errorMessage = 'Данные доктора не загружены';
-        _isLoading = false;
-      });
-      return;
-    }
-    
-    // Получаем ID доктора
-    final doctorId = _apiClient.currentDoctor!['id']?.toString();
-    
-    if (doctorId == null) {
-      setState(() {
-        _errorMessage = 'ID доктора не установлен';
-        _isLoading = false;
-      });
-      return;
-    }
+  // Проверяем инициализацию доктора
+  if (_apiClient.currentDoctor == null) {
+    setState(() {
+      _errorMessage = 'Данные доктора не загружены';
+      _isLoading = false;
+    });
+    return;
+  }
+  
+  // Получаем ID доктора из сохраненных данных
+  final doctorId = _apiClient.currentDoctor!['id']?.toString();
+  
+  if (doctorId == null) {
+    setState(() {
+      _errorMessage = 'ID доктора не установлен';
+      _isLoading = false;
+    });
+    return;
+  }
 
     setState(() {
       _isLoading = true;

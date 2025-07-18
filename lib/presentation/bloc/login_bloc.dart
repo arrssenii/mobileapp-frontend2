@@ -23,7 +23,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   emit(LoginLoading());
   try {
     final user = await loginUseCase(event.username, event.password);
-    emit(LoginSuccess(user: user));
+    emit(LoginSuccess(user: user, userId: user.userId));
   } on ApiError catch (e) {
     emit(LoginError(message: e.message));
   } on DioException catch (e) {

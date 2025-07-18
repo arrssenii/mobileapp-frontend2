@@ -172,11 +172,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'password': password,
       });
       
-      // Проверка структуры ответа
-      if (response.containsKey('token')) {
-        return UserModel(token: response['token']);
+      // Проверяем структуру ответа
+      if (response.containsKey('token') && response.containsKey('id')) {
+        // Преобразуем ID в int
+        final userId = response['id'] is int 
+            ? response['id'] 
+            : int.tryParse(response['id'].toString());
+        
+        if (userId == null) {
+          throw Exception('Неверный формат ID пользователя');
+        }
+        
+        return UserModel(
+          token: response['token'],
+          userId: userId,
+        );
       } else {
-        throw Exception('Неверный формат ответа сервера: отсутствует токен');
+        throw Exception('Неверный формат ответа сервера: отсутствует токен или id');
       }
     } on DioException catch (e) {
       throw Exception('Ошибка сети: ${e.message}');

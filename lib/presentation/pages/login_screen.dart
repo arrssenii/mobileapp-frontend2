@@ -21,7 +21,7 @@ class LoginScreen extends StatelessWidget {
         child: BlocConsumer<LoginBloc, LoginState>(
           listener: (context, state) async {
             if (state is LoginSuccess) {
-              await _loadDoctorData(context);
+              await _loadDoctorData(context, state.userId);
               
               // Переходим напрямую на MainScreen
               Navigator.pushReplacement(
@@ -97,16 +97,25 @@ class LoginScreen extends StatelessWidget {
   }
   
   // Загрузка данных доктора после успешной аутентификации
-  Future<void> _loadDoctorData(BuildContext context) async {
+  Future<void> _loadDoctorData(BuildContext context, int userId) async {
   try {
     final apiClient = Provider.of<ApiClient>(context, listen: false);
-    const doctorId = '1';
     
-    final doctorData = await apiClient.getDoctorById(doctorId);
+    // Преобразуем int в String для запроса
+    final doctorData = await apiClient.getDoctorById(userId.toString());
     
     // Проверяем наличие ID
     if (doctorData['id'] == null) {
       throw Exception('Сервер не вернул ID доктора');
+    }
+    
+    // Преобразуем ID доктора в int для проверки
+    final responseId = doctorData['id'] is int 
+        ? doctorData['id'] 
+        : int.tryParse(doctorData['id'].toString());
+    
+    if (responseId == null || responseId != userId) {
+      throw Exception('ID доктора в ответе ($responseId) не соответствует запрошенному ($userId)');
     }
     
     apiClient.setCurrentDoctor(doctorData);

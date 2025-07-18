@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:demo_app/data/models/appointment_model.dart'; // Добавлен импорт модели
+import 'package:demo_app/services/api_client.dart'; // Добавлен импорт
+import 'package:demo_app/data/models/appointment_model.dart';
 import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
 import 'package:demo_app/presentation/pages/consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
@@ -21,61 +20,43 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   List<Appointment> _appointments = [];
   bool _isLoading = false;
   String? _errorMessage;
+  final ApiClient _apiClient = ApiClient(); // Создаем экземпляр ApiClient
 
   Future<void> _loadAppointments() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final hits = await _apiClient.getReceptionsHospitalByDoctorAndDate(
+      '1', // ID доктора
+      date: _selectedDate,
+      page: 1,
+    );
+
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _appointments = hits.map((hit) {
+        return Appointment(
+          id: hit['id'] ?? 0,
+          patientName: hit['patient_name'] ?? 'Неизвестный пациент',
+          diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
+          address: hit['address'] ?? 'Адрес не указан',
+          time: _parseDateTime(hit['date']),
+          status: _parseStatus(hit['status'] ?? 'Запланирован'),
+        );
+      }).toList();
     });
-
-    try {
-      final formattedDate = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
-      final url = Uri.parse('http://192.168.30.106:8080/api/v1/recepHospital/1?date=$formattedDate&page=1');
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        final List<dynamic> hits = data['hits'];
-
-        setState(() {
-          _appointments = hits.map((hit) {
-            // Парсим дату из формата "dd.MM.yyyy HH:mm"
-            final dateParts = (hit['date'] as String).split(' ');
-            final dateStr = dateParts[0];
-            final timeStr = dateParts[1];
-            
-            final dateComponents = dateStr.split('.').map(int.parse).toList();
-            final timeComponents = timeStr.split(':').map(int.parse).toList();
-            
-            return Appointment(
-              id: hit['id'],
-              patientName: hit['patient_name'],
-              diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
-              address: hit['address'] ?? 'Адрес не указан',
-              time: DateTime(
-                dateComponents[2], 
-                dateComponents[1], 
-                dateComponents[0],
-                timeComponents[0],
-                timeComponents[1],
-              ),
-              status: _parseStatus(hit['status']),
-            );
-          }).toList();
-        });
-      } else {
-        throw Exception('Failed to load appointments: ${response.statusCode}');
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+  } on ApiError catch (e) {
+    setState(() {
+      _errorMessage = 'Ошибка загрузки: ${e.message}';
+    });
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
 
   AppointmentStatus _parseStatus(String status) {
     switch (status) {
@@ -92,6 +73,26 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> _refreshAppointments() async {
     await _loadAppointments();
   }
+
+  DateTime _parseDateTime(String? dateString) {
+  if (dateString == null) return DateTime.now();
+  
+  try {
+    final parts = dateString.split(' ');
+    final dateParts = parts[0].split('.').map(int.parse).toList();
+    final timeParts = parts[1].split(':').map(int.parse).toList();
+    
+    return DateTime(
+      dateParts[2], 
+      dateParts[1], 
+      dateParts[0],
+      timeParts[0],
+      timeParts[1],
+    );
+  } catch (e) {
+    return DateTime.now();
+  }
+}
 
   @override
   void initState() {

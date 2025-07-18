@@ -94,12 +94,14 @@ class PatientCard extends StatelessWidget {
     );
   }
 
-  String _formatBirthDate(String birthDate) {
+  String _formatBirthDate(dynamic birthDate) {
+    if (birthDate == null) return 'Дата рождения неизвестна';
+
     try {
-      final date = DateTime.parse(birthDate);
+      final date = DateTime.parse(birthDate);       
       return '${date.day}.${date.month}.${date.year}';
     } catch (e) {
-      return 'Дата рождения неизвестна';
+      return 'Неверный формат даты';
     }
   }
 

@@ -1,9 +1,9 @@
-// lib/services/api_client.dart
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiClient {
   late Dio _dio;
+  String? _authToken;
 
   final String baseUrl = 'http://192.168.30.106:8080/api/v1';
 
@@ -18,11 +18,21 @@ class ApiClient {
     _setupInterceptors();
   }
 
+  void setAuthToken(String token) {
+    _authToken = token;
+    _dio.options.headers['Authorization'] = 'Bearer $token';
+  }
+
+  void clearAuthToken() {
+    _authToken = null;
+    _dio.options.headers.remove('Authorization');
+  }
+
   void _setupInterceptors() {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          debugPrint('API Request: ${options.method} ${options.path}');
+          debugPrint('API Request: ${options.method} ${options.uri}');
           debugPrint('Headers: ${options.headers}');
           if (options.data != null) {
             debugPrint('Body: ${options.data}');
@@ -52,96 +62,216 @@ class ApiClient {
 
   // Аутентификация
   Future<Map<String, dynamic>> loginDoctor(Map<String, dynamic> credentials) async {
-  try {
-    final response = await _dio.post(
-      '/auth',
-      data: credentials,
-      options: Options(
-        contentType: Headers.jsonContentType,
-        validateStatus: (status) => status! < 500,
-      ),
-    );
-    
-    if (response.statusCode == 200) {
-      return response.data;
-    } else {
-      throw ApiError(
-        statusCode: response.statusCode,
-        message: response.data['message'] ?? 'Ошибка авторизации',
-        rawError: response.data,
+    try {
+      final response = await _dio.post(
+        '/auth',
+        data: credentials,
+        options: Options(
+          contentType: Headers.jsonContentType,
+          validateStatus: (status) => status! < 500,
+        ),
       );
-    }
-  } on DioException catch (e) {
-    if (e.response != null) {
-      throw ApiError(
-        statusCode: e.response!.statusCode,
-        message: e.response!.data['message'] ?? e.message,
-        rawError: e.response!.data,
-      );
-    } else {
-      throw ApiError(message: e.message ?? 'Сетевая ошибка');
+      
+      if (response.statusCode == 200) {
+        // Сохраняем токен при успешной аутентификации
+        if (response.data['token'] != null) {
+          setAuthToken(response.data['token']);
+        }
+        return response.data;
+      } else {
+        throw ApiError(
+          statusCode: response.statusCode,
+          message: response.data['message'] ?? 'Ошибка авторизации',
+          rawError: response.data,
+        );
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Сетевая ошибка при авторизации');
     }
   }
+
+  // Доктора
+  Future<Map<String, dynamic>> getDoctorById(String docId) async {
+  return _handleApiCall(
+    () => _dio.get('/doctors/$docId').then((response) => response.data as Map<String, dynamic>),
+    errorMessage: 'Ошибка получения данных доктора',
+  );
 }
 
-  // Медкарта пациента
-  Future<Map<String, dynamic>> getMedCardByPatientId(String patId) async {
-    final response = await _dio.get('/medcard/$patId');
-    return response.data;
-  }
-
-  Future<Map<String, dynamic>> updateMedCard(String patId, Map<String, dynamic> data) async {
-    final response = await _dio.put('/medcard/$patId', data: data);
-    return response.data;
-  }
-
-  // Приемы СМП
-  Future<List<dynamic>> getReceptionsSMPByDoctorId(String doctorId) async {
-    final response = await _dio.get('/receps/$doctorId');
-    return response.data['data'];
-  }
-
-  // Приемы в стационаре
-  Future<List<dynamic>> getReceptionsHospitalByDoctorId(String docId) async {
-    final response = await _dio.get('/recepHospital/$docId');
-    return response.data['data'];
-  }
-
-  Future<List<dynamic>> getReceptionsHospitalByPatientId(String patId) async {
-    final response = await _dio.get('/recepHospital/patients/$patId');
-    return response.data['data'];
-  }
-
-  Future<Map<String, dynamic>> updateReceptionHospital(String recepId, Map<String, dynamic> data) async {
-    final response = await _dio.put('/recepHospital/$recepId', data: data);
-    return response.data;
+  Future<Map<String, dynamic>> updateDoctor(String docId, Map<String, dynamic> data) async {
+    return _handleApiCall(
+      () => _dio.put('/doctors/$docId', data: data).then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка обновления данных доктора',
+    );
   }
 
   // Пациенты
-  Future<List<dynamic>> getPatientsByDoctorId(String docId) async {
-    final response = await _dio.get('/patients/$docId');
-    return response.data['data'];
-  }
-
   Future<List<dynamic>> getAllPatients() async {
-    final response = await _dio.get('/patients/');
-    return response.data['data'];
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get('/patients/');
+        // Достаем пациентов из data->hits
+        return response.data['data']['hits'] as List<dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки пациентов',
+    );
   }
 
-  // СМП
-  Future<List<dynamic>> getEmergencyCallsByDoctorId(String docId) async {
-    final response = await _dio.get('/emergencyGroup/$docId');
-    return response.data['data'];
+  Future<Map<String, dynamic>> getPatientById(String patId) async {
+    return _handleApiCall(
+      () => _dio.get('/patients/$patId').then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка получения данных пациента',
+    );
   }
 
-  Future<List<dynamic>> getSMPCallsByDoctorId(String docId) async {
-    final response = await _dio.get('/emergencyGroup/$docId/smps');
-    return response.data['data'];
+  Future<Map<String, dynamic>> createPatient(Map<String, dynamic> patientData) async {
+    return _handleApiCall(
+      () => _dio.post('/patients/', data: patientData).then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка создания пациента',
+    );
   }
 
-  Future<Map<String, dynamic>> getReceptionWithMedServices(String docId, String smpId) async {
-    final response = await _dio.get('/emergencyGroup/$docId/smps/$smpId');
-    return response.data;
+  Future<Map<String, dynamic>> updatePatient(String patId, Map<String, dynamic> data) async {
+    return _handleApiCall(
+      () => _dio.put('/patients/$patId', data: data).then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка обновления данных пациента',
+    );
+  }
+
+  Future<void> deletePatient(String patId) async {
+    return _handleApiCall(
+      () => _dio.delete('/patients/$patId'),
+      errorMessage: 'Ошибка удаления пациента',
+    );
+  }
+
+  // Медкарты
+  Future<Map<String, dynamic>> getMedCardByPatientId(String patId) async {
+    return _handleApiCall(
+      () => _dio.get('/medcard/$patId').then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка загрузки медкарты',
+    );
+  }
+
+  Future<Map<String, dynamic>> updateMedCard(String patId, Map<String, dynamic> data) async {
+    return _handleApiCall(
+      () => _dio.put('/medcard/$patId', data: data).then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка обновления медкарты',
+    );
+  }
+
+  // Приёмы в стационаре
+  Future<List<dynamic>> getReceptionsHospitalByDoctorAndDate(
+  String docId, {
+  required DateTime date,
+  int page = 1,
+}) async {
+  final formattedDate = _formatDate(date);
+  return _handleApiCall(
+    () async {
+      final response = await _dio.get(
+        '/hospital/doctors/$docId/receptions',
+        queryParameters: {
+          'date': formattedDate,
+          'page': page,
+        },
+      );
+      // Заменяем response.data['data'] на response.data['hits']
+      return response.data['hits'] as List<dynamic>;
+    },
+    errorMessage: 'Ошибка загрузки приёмов в стационаре',
+  );
+}
+
+  Future<Map<String, dynamic>> updateReceptionHospital(
+    String recepId,
+    Map<String, dynamic> data,
+  ) async {
+    return _handleApiCall(
+      () => _dio.put('/hospital/receptions/$recepId', data: data).then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка обновления приёма в стационаре',
+    );
+  }
+
+  // Приёмы СМП
+  Future<List<dynamic>> getReceptionsSMPByDoctorAndDate(
+    String docId, {
+    required DateTime date,
+    int page = 1,
+  }) async {
+    final formattedDate = _formatDate(date);
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get(
+          '/smp/doctors/$docId/receptions',
+          queryParameters: {
+            'date': formattedDate,
+            'page': page,
+          },
+        );
+        return response.data['data'] as List<dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки приёмов СМП',
+    );
+  }
+
+  Future<Map<String, dynamic>> getReceptionWithMedServices(String smpId) async {
+    return _handleApiCall(
+      () => _dio.get('/smp/$smpId').then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка загрузки приёма СМП с услугами',
+    );
+  }
+
+  // Звонки СМП
+  Future<List<dynamic>> getEmergencyCallsByDoctorAndDate(
+    String docId, {
+    required DateTime date,
+    int page = 1,
+  }) async {
+    final formattedDate = _formatDate(date);
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get(
+          '/emergency/$docId',
+          queryParameters: {
+            'date': formattedDate,
+            'page': page,
+          },
+        );
+        return response.data['data'] as List<dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки звонков СМП',
+    );
+  }
+
+  // Вспомогательные методы
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  ApiError _handleDioError(DioException e, String defaultMessage) {
+    if (e.response != null) {
+      return ApiError(
+        statusCode: e.response!.statusCode,
+        message: e.response!.data['message'] ?? e.message ?? defaultMessage,
+        rawError: e.response!.data,
+      );
+    } else {
+      return ApiError(message: e.message ?? defaultMessage);
+    }
+  }
+
+  Future<T> _handleApiCall<T>(
+    Future<T> Function() apiCall, {
+    required String errorMessage,
+  }) async {
+    try {
+      return await apiCall();
+    } on DioException catch (e) {
+      throw _handleDioError(e, errorMessage);
+    } catch (e) {
+      throw ApiError(message: '$errorMessage: ${e.toString()}');
+    }
   }
 }
 
@@ -157,5 +287,5 @@ class ApiError implements Exception {
   });
 
   @override
-  String toString() => 'ApiError [status: $statusCode]: $message';
+  String toString() => 'ApiError [status: ${statusCode ?? "N/A"}]: $message';
 }

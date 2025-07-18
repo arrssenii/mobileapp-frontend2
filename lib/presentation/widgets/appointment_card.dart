@@ -17,6 +17,9 @@ class AppointmentCard extends StatelessWidget {
     IconData? statusIcon;
     Color? iconColor;
     String statusText = '';
+    final patientName = appointment.patientName ?? 'Неизвестный пациент';
+    final diagnosis = appointment.diagnosis ?? 'Диагноз не указан';
+    final address = appointment.address ?? 'Адрес не указан';
 
     switch (appointment.status) {
       case AppointmentStatus.noShow:

@@ -5,7 +5,6 @@ import 'package:universal_html/html.dart' as html;
 
 class AuthService {
   static const String _tokenKey = 'auth_token';
-  static const String _storageKey = 'auth_data';
   
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final SharedPreferences? _prefs;
@@ -22,7 +21,7 @@ class AuthService {
       
       // Дополнительно сохраняем в SharedPreferences
       if (_prefs != null) {
-        await _prefs!.setString(_tokenKey, token);
+        await _prefs.setString(_tokenKey, token);
       }
     } else {
       // Для мобильных платформ используем Secure Storage
@@ -56,7 +55,7 @@ class AuthService {
       
       // Удаляем из SharedPreferences
       if (_prefs != null) {
-        await _prefs!.remove(_tokenKey);
+        await _prefs.remove(_tokenKey);
       }
     } else {
       // Для мобильных платформ

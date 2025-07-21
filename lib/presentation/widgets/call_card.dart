@@ -79,10 +79,10 @@ class CallCard extends StatelessWidget {
               
               Row(
                 children: [
-                  Icon(Icons.local_hospital, size: 20, color: Theme.of(context).primaryColor),
+                  Icon(Icons.person_outline, size: 20, color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Text(
-                    'Врач: ${call['doctor']}',
+                    'Пациент: ${call['phone']}', // Используем номер телефона
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],

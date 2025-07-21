@@ -308,25 +308,26 @@ class ApiClient {
 
   // Звонки СМП
   Future<List<dynamic>> getEmergencyCallsByDoctorAndDate(
-    String docId, {
-    required DateTime date,
-    int page = 1,
-  }) async {
-    final formattedDate = _formatDate(date);
-    return _handleApiCall(
-      () async {
-        final response = await _dio.get(
-          '/emergency/$docId',
-          queryParameters: {
-            'date': formattedDate,
-            'page': page,
-          },
-        );
-        return response.data['data'] as List<dynamic>;
-      },
-      errorMessage: 'Ошибка загрузки звонков СМП',
-    );
-  }
+  String docId, {
+  required DateTime date,
+  int page = 1,
+}) async {
+  final formattedDate = _formatDate(date);
+  return _handleApiCall(
+    () async {
+      final response = await _dio.get(
+        '/emergency/$docId',
+        queryParameters: {
+          'date': formattedDate,
+          'page': page,
+        },
+      );
+      // Исправлено: берем данные из поля 'hits' вместо 'data'
+      return response.data['hits'] as List<dynamic>;
+    },
+    errorMessage: 'Ошибка загрузки звонков СМП',
+  );
+}
 
   // Вспомогательные методы
   String _formatDate(DateTime date) {

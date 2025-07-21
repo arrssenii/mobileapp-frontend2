@@ -76,7 +76,12 @@ class ResponsiveCardList extends StatelessWidget {
     return Column(
       children: [
         if (showSearch) _buildSearchRow(context),
-        Expanded(child: listContent),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: onRefresh ?? () async {}, // Обработка обновления
+            child: listContent,
+          ),
+        ),
       ],
     );
   }

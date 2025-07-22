@@ -5,8 +5,8 @@ class CustomFormField extends StatelessWidget {
   final TextEditingController controller;
   final bool isRequired;
   final int? maxLength;
-  final int maxLines;
-  final TextInputType keyboardType;
+  final int? maxLines;
+  final TextInputType? keyboardType;
   
   const CustomFormField({
     super.key,

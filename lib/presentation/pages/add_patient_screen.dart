@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../widgets/date_picker_icon_button.dart';
-import '../widgets/form_field.dart';
+import '../widgets/custom_form_field.dart';
 
 class AddPatientScreen extends StatefulWidget {
   const AddPatientScreen({super.key});
@@ -109,12 +109,14 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
               CustomFormField(
                       label: 'СНИЛС',
                       controller: TextEditingController(text: _patientData['snils']),
+                      maxLength: 11,
               ),
               
               // ОМС
               CustomFormField(
                       label: 'Полис ОМС',
                       controller: TextEditingController(text: _patientData['oms']),
+                      maxLength: 16,
               ),
                       
               

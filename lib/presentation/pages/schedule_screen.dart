@@ -41,25 +41,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Future<void> _loadAppointments() async {
-  // Проверяем инициализацию доктора
-  if (_apiClient.currentDoctor == null) {
-    setState(() {
-      _errorMessage = 'Данные доктора не загружены';
-      _isLoading = false;
-    });
-    return;
-  }
-  
-  // Получаем ID доктора из сохраненных данных
-  final doctorId = _apiClient.currentDoctor!['id']?.toString();
-  
-  if (doctorId == null) {
-    setState(() {
-      _errorMessage = 'ID доктора не установлен';
-      _isLoading = false;
-    });
-    return;
-  }
+    // Проверяем инициализацию доктора
+    if (_apiClient.currentDoctor == null) {
+      setState(() {
+        _errorMessage = 'Данные доктора не загружены';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Получаем ID доктора из сохраненных данных
+    final doctorId = _apiClient.currentDoctor!['id']?.toString();
+
+    if (doctorId == null) {
+      setState(() {
+        _errorMessage = 'ID доктора не установлен';
+        _isLoading = false;
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -99,7 +99,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       });
     }
   }
-
   AppointmentStatus _parseStatus(String status) {
     switch (status) {
       case 'Завершен':
@@ -117,24 +116,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   DateTime _parseDateTime(String? dateString) {
-  if (dateString == null) return DateTime.now();
-  
-  try {
-    final parts = dateString.split(' ');
-    final dateParts = parts[0].split('.').map(int.parse).toList();
-    final timeParts = parts[1].split(':').map(int.parse).toList();
+    if (dateString == null) return DateTime.now();
     
-    return DateTime(
-      dateParts[2], 
-      dateParts[1], 
-      dateParts[0],
-      timeParts[0],
-      timeParts[1],
-    );
-  } catch (e) {
-    return DateTime.now();
+    try {
+      // Используем регулярное выражение для надежного парсинга
+      final dateRegex = RegExp(r'(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})');
+      final match = dateRegex.firstMatch(dateString);
+      
+      if (match != null) {
+        return DateTime(
+          int.parse(match.group(3)!), // год
+          int.parse(match.group(2)!), // месяц
+          int.parse(match.group(1)!), // день
+          int.parse(match.group(4)!), // час
+          int.parse(match.group(5)!), // минуты
+        );
+      }
+      return DateTime.now();
+    } catch (e) {
+      return DateTime.now();
+    }
   }
-}
 
   void _handleDateSelected(DateTime date) {
     setState(() {

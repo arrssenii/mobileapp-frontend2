@@ -246,26 +246,33 @@ class ApiClient {
 
   // Приёмы в стационаре
   Future<List<dynamic>> getReceptionsHospitalByDoctorAndDate(
-  String docId, {
-  required DateTime date,
-  int page = 1,
-}) async {
-  final formattedDate = _formatDate(date);
-  return _handleApiCall(
-    () async {
-      final response = await _dio.get(
-        '/hospital/doctors/$docId/receptions',
-        queryParameters: {
-          'date': formattedDate,
-          'page': page,
-        },
-      );
-      // Заменяем response.data['data'] на response.data['hits']
-      return response.data['hits'] as List<dynamic>;
-    },
-    errorMessage: 'Ошибка загрузки приёмов в стационаре',
-  );
-}
+    String docId, {
+    required DateTime date,
+    int page = 1,
+  }) async {
+    final formattedDate = _formatDate(date);
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get(
+          '/hospital/receptions/$docId',
+          queryParameters: {
+            'filter': 'date.eq.$formattedDate', // Измененный параметр фильтра
+            'page': page,
+          },
+        );
+        
+        // Проверяем структуру ответа
+        if (response.data is! Map<String, dynamic> || 
+            response.data['data'] == null ||
+            response.data['data']['hits'] == null) {
+          throw ApiError(message: 'Некорректный формат ответа сервера');
+        }
+        
+        return response.data['data']['hits'] as List<dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки приёмов в стационаре',
+    );
+  }
 
   Future<Map<String, dynamic>> updateReceptionHospital(
     String recepId,

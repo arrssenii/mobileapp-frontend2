@@ -51,7 +51,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
 
     // Получаем ID доктора из сохраненных данных
-    final doctorId = _apiClient.currentDoctor!['id']?.toString();
+    final doctorId = _apiClient.currentDoctor!.id.toString();
 
     if (doctorId == null) {
       setState(() {

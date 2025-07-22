@@ -14,6 +14,7 @@ import 'domain/repositories/auth_repository.dart';
 import 'data/datasources/auth_remote_data_source.dart';
 import 'data/models/user_model.dart';
 import 'data/repositories/auth_repository_impl.dart';
+import 'data/models/doctor_model.dart';
 
 // Presentation Layer
 import 'presentation/pages/login_screen.dart';
@@ -144,26 +145,55 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: FutureBuilder<String?>(
-          future: apiClient.getToken(), // Используем существующий экземпляр apiClient
+          future: apiClient.getToken(),
           builder: (context, snapshot) {
-            // Пока идет проверка токена
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
             }
             
-            // Если токен получен - MainScreen, иначе LoginPage
-            return snapshot.hasData && snapshot.data != null
-                ? const MainScreen()
-                : LoginScreen();
+            if (snapshot.hasData && snapshot.data != null) {
+              // Если данные доктора уже загружены
+              if (apiClient.currentDoctor != null) {
+                return const MainScreen();
+              }
+              
+              // Загружаем данные доктора если есть ID
+              return FutureBuilder<void>(
+                future: _loadDoctorData(context),
+                builder: (context, doctorSnapshot) {
+                  if (doctorSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return const MainScreen();
+                },
+              );
+            }
+            
+            return LoginScreen();
           },
         ),
-        routes: {
-          '/main': (context) => const MainScreen(),
-        },
       ),
     );
+  }
+
+  Future<void> _loadDoctorData(BuildContext context) async {
+    try {
+      final doctorId = await context.read<AuthService>().getDoctorId();
+      if (doctorId != null) {
+        final doctorData = await context.read<ApiClient>().getDoctorById(doctorId);
+        final doctor = Doctor.fromJson(doctorData); // Преобразование
+        context.read<ApiClient>().setCurrentDoctor(doctor);
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки данных доктора: $e');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    }
   }
 }
 

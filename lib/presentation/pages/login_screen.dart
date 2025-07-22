@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import '../../data/models/doctor_model.dart';
 
 import 'main_screen.dart';
 
@@ -118,7 +119,8 @@ class LoginScreen extends StatelessWidget {
       throw Exception('ID доктора в ответе ($responseId) не соответствует запрошенному ($userId)');
     }
     
-    apiClient.setCurrentDoctor(doctorData);
+    final doctor = Doctor.fromJson(doctorData);
+    apiClient.setCurrentDoctor(doctor);
     await Future.delayed(const Duration(milliseconds: 100));
     
   } catch (e) {

@@ -43,7 +43,8 @@ class _CallsScreenState extends State<CallsScreen> {
         throw Exception('Доктор не авторизован');
       }
       
-      final docId = currentDoctor['id'].toString();
+      // Аналогичная замена
+      final docId = currentDoctor.id.toString();
       final callsData = await apiClient.getEmergencyCallsByDoctorAndDate(
         docId,
         date: _selectedDate,

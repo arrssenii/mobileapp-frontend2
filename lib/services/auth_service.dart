@@ -5,6 +5,7 @@ import 'package:universal_html/html.dart' as html;
 
 class AuthService {
   static const String _tokenKey = 'auth_token';
+  static const String _doctorIdKey = 'doctor_id'; // Ключ для ID доктора
   
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final SharedPreferences? _prefs;
@@ -29,6 +30,20 @@ class AuthService {
     }
   }
 
+  Future<void> saveDoctorId(String doctorId) async {
+    if (kIsWeb) {
+      final expiration = DateTime.now().add(const Duration(days: 30));
+      final cookie = "doctor_id=$doctorId; expires=${expiration.toUtc().toIso8601String()}; path=/";
+      html.document.cookie = cookie;
+      
+      if (_prefs != null) {
+        await _prefs?.setString(_doctorIdKey, doctorId);
+      }
+    } else {
+      await _secureStorage.write(key: _doctorIdKey, value: doctorId);
+    }
+  }
+
   // Получаем токен
   Future<String?> getToken() async {
     if (kIsWeb) {
@@ -44,6 +59,38 @@ class AuthService {
     } else {
       // Логика для мобильных платформ
       return await _secureStorage.read(key: _tokenKey);
+    }
+  }
+
+  Future<String?> getDoctorId() async {
+    if (kIsWeb) {
+      final cookies = html.document.cookie?.split(';') ?? [];
+      for (final cookie in cookies) {
+        final parts = cookie.split('=');
+        if (parts.length == 2 && parts[0].trim() == 'doctor_id') {
+          return parts[1].trim();
+        }
+      }
+      return _prefs?.getString(_doctorIdKey);
+    } else {
+      return await _secureStorage.read(key: _doctorIdKey);
+    }
+  }
+
+  Future<void> clearAll() async {
+    await deleteToken();
+    await deleteDoctorId();
+  }
+
+  // Удаление ID доктора
+  Future<void> deleteDoctorId() async {
+    if (kIsWeb) {
+      html.document.cookie = "doctor_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      if (_prefs != null) {
+        await _prefs?.remove(_doctorIdKey);
+      }
+    } else {
+      await _secureStorage.delete(key: _doctorIdKey);
     }
   }
 

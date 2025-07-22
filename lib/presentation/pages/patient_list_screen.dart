@@ -42,34 +42,43 @@ class _PatientListScreenState extends State<PatientListScreen> {
   }
 
   Future<void> _fetchPatients() async {
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
-
-  try {
-    final patientsData = await _apiClient.getAllPatients();
-    
     setState(() {
-      _patients = patientsData.map((patient) {
-        return {
-          'id': patient['ID'] ?? 0,
-          'full_name': patient['full_name'] ?? 'Без имени',
-          'is_male': patient['is_male'] ?? false,
-          'birth_date': patient['birth_date'] ?? '',
-        };
-      }).toList();
+      _isLoading = true;
+      _errorMessage = null;
     });
-  } on ApiError catch (e) {
-    setState(() {
-      _errorMessage = 'Ошибка загрузки: ${e.message}';
-    });
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
+  
+    try {
+      if (_apiClient.currentDoctor == null) {
+        throw Exception('Данные доктора не загружены');
+      }
+      
+      final docId = _apiClient.currentDoctor!.id.toString();
+      final patientsData = await _apiClient.getAllPatients(docId);
+      
+      setState(() {
+        _patients = patientsData.map((patient) {
+          return {
+            'id': patient['id'] ?? patient['ID'] ?? 0, // Универсальное получение ID
+            'full_name': patient['full_name'] ?? 'Без имени',
+            'is_male': patient['is_male'] ?? false,
+            'birth_date': patient['birth_date'] ?? '',
+          };
+        }).toList();
+      });
+    } on ApiError catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка загрузки: ${e.message}';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
 
   Future<void> _refreshPatients() async {
     await _fetchPatients();
@@ -87,34 +96,50 @@ class _PatientListScreenState extends State<PatientListScreen> {
   }
 
   Future<void> _addNewPatient(Map<String, dynamic> patientData) async {
-  setState(() {
-    _isLoading = true;
-  });
+    setState(() {
+      _isLoading = true;
+    });
 
-  try {
-    await _apiClient.createPatient({
-      'full_name': patientData['fullName'],
-      'birth_date': patientData['birthDate'],
-      'is_male': patientData['gender'] == 'Мужской',
-    });
-    
-    await _fetchPatients(); // Обновляем список
-  } on ApiError catch (e) {
-    setState(() {
-      _errorMessage = 'Ошибка добавления: ${e.message}';
-    });
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
+    try {
+      // Проверяем наличие данных доктора
+      if (_apiClient.currentDoctor == null) {
+        throw Exception('Данные доктора не загружены');
+      }
+
+      // Получаем ID доктора
+      final docId = _apiClient.currentDoctor!.id.toString();
+
+      // Передаем ID в запрос
+      await _apiClient.createPatient({
+        'doctor_id': docId, // Добавляем ID доктора
+        'full_name': patientData['fullName'],
+        'birth_date': patientData['birthDate'],
+        'is_male': patientData['gender'] == 'Мужской',
+      });
+
+      await _fetchPatients();
+    } on ApiError catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка добавления: ${e.message}';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
 
   void _openPatientDetails(Map<String, dynamic> patient) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PatientDetailScreen(patientId: patient['id']),
+        builder: (context) => PatientDetailScreen(
+          patientId: patient['id'].toString(), // Преобразуем ID в строку
+        ),
       ),
     );
   }
@@ -143,28 +168,42 @@ class _PatientListScreenState extends State<PatientListScreen> {
   }
 
  @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text(
-        'Пациенты',
-        style: TextStyle(color: Color(0xFF8B8B8B)),
-        ), // упрощенный заголовок
-      backgroundColor: const Color(0xFFFFFFFF),
-      toolbarHeight: 60, // уменьшенная высота
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh, color: Color(0xFF8B8B8B)), // Серый цвет
-          onPressed: _refreshPatients,
-          tooltip: 'Обновить список',
+  Widget build(BuildContext context) {
+    if (_errorMessage != null && _errorMessage!.contains('Данные доктора не загружены')) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Данные доктора не загружены'),
+            ElevatedButton(
+              onPressed: _fetchPatients,
+              child: const Text('Повторить попытку'),
+            ),
+          ],
         ),
-        IconButton(
-          icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)), // Серый цвет
-          onPressed: _openAddPatientScreen,
-          tooltip: 'Добавить пациента',
-        ),
-      ],
-    ),
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Пациенты',
+          style: TextStyle(color: Color(0xFF8B8B8B)),
+          ), // упрощенный заголовок
+        backgroundColor: const Color(0xFFFFFFFF),
+        toolbarHeight: 60, // уменьшенная высота
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF8B8B8B)), // Серый цвет
+            onPressed: _refreshPatients,
+            tooltip: 'Обновить список',
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)), // Серый цвет
+            onPressed: _openAddPatientScreen,
+            tooltip: 'Добавить пациента',
+          ),
+        ],
+      ),
       body: _isLoading
     ? const Center(child: CircularProgressIndicator())
     : _errorMessage != null

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'auth_service.dart';
 import 'package:flutter/foundation.dart';
+import '../data/models/patient_model.dart';
 
 class ApiClient {
   late Dio _dio;
@@ -230,9 +231,22 @@ class ApiClient {
   }
 
   // Медкарты
-  Future<Map<String, dynamic>> getMedCardByPatientId(String patId) async {
+  // services/api_client.dart
+  Future<Patient> getMedCardByPatientId(String patId) async {
     return _handleApiCall(
-      () => _dio.get('/medcard/$patId').then((response) => response.data as Map<String, dynamic>),
+      () async {
+        final response = await _dio.get('/medcard/$patId');
+        
+        if (response.statusCode != 200) {
+          throw ApiError(
+            statusCode: response.statusCode,
+            message: 'Ошибка сервера: ${response.statusCode}',
+            rawError: response.data,
+          );
+        }
+        
+        return Patient.fromMedCardJson(response.data);
+      },
       errorMessage: 'Ошибка загрузки медкарты',
     );
   }

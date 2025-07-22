@@ -77,6 +77,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         _appointments = hits.map((hit) {
           return Appointment(
             id: hit['id'] ?? 0,
+            patientId: hit['patient_id'] ?? 0,
             patientName: hit['patient_name'] ?? 'Неизвестный пациент',
             diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
             address: hit['address'] ?? 'Адрес не указан',
@@ -117,12 +118,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   DateTime _parseDateTime(String? dateString) {
     if (dateString == null) return DateTime.now();
-    
+
     try {
       // Используем регулярное выражение для надежного парсинга
       final dateRegex = RegExp(r'(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})');
       final match = dateRegex.firstMatch(dateString);
-      
+
       if (match != null) {
         return DateTime(
           int.parse(match.group(3)!), // год
@@ -211,18 +212,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _openPatientDetails(BuildContext context, Appointment appointment) {
-    final patient = {
-      'id': appointment.id,
-      'fullName': appointment.patientName,
-      'diagnosis': appointment.diagnosis,
-      'address': appointment.address,
-      // Остальные поля можно заполнить по мере необходимости
-    };
-    
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PatientDetailScreen(patient: patient),
+        builder: (context) => PatientDetailScreen(
+          patientId: appointment.patientId.toString(),
+        ),
       ),
     );
   }

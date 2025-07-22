@@ -255,7 +255,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PatientDetailScreen(patient: patientData),
+        builder: (context) => PatientDetailScreen(patientId: patientData['id']),
       ),
     );
   }

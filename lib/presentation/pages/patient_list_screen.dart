@@ -114,21 +114,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PatientDetailScreen(
-          patient: {
-            ...patient,
-            'contact_info': {
-              'phone': 'Не указан',
-              'email': 'Не указан',
-              'address': 'Не указан',
-            },
-            'personal_info': {
-              'snils': 'Не указан',
-              'oms': 'Не указан',
-              'passport': 'Не указан',
-            },
-          },
-        ),
+        builder: (context) => PatientDetailScreen(patientId: patient['id']),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dio/dio.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 // Domain Layer
 import 'domain/usecases/login_usecase.dart';
@@ -66,6 +67,14 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Медицинская информационная система',
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('ru', 'RU'),
+        ],
         theme: ThemeData(
           primaryColor: const Color(0xFF8B8B8B),
           colorScheme: ColorScheme.fromSwatch(

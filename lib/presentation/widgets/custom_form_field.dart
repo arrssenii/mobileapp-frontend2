@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CustomFormField extends StatelessWidget {
   final String label;
@@ -7,6 +8,7 @@ class CustomFormField extends StatelessWidget {
   final int? maxLength;
   final int? maxLines;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   
   const CustomFormField({
     super.key,
@@ -16,6 +18,7 @@ class CustomFormField extends StatelessWidget {
     this.maxLength,
     this.maxLines = 1,
     this.keyboardType = TextInputType.text,
+    this.inputFormatters,
   });
 
   @override
@@ -33,6 +36,7 @@ class CustomFormField extends StatelessWidget {
         maxLength: maxLength,
         maxLines: maxLines,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         validator: (value) {
           if (isRequired && (value == null || value.isEmpty)) {
             return 'Обязательное поле';

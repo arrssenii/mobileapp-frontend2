@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 class DatePickerIconButton extends StatelessWidget {
   final DateTime? initialDate;
@@ -23,39 +24,7 @@ class DatePickerIconButton extends StatelessWidget {
     this.showDateText = false,
   });
 
-  Future<void> _showDatePicker(BuildContext context) async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate ?? DateTime.now(),
-      firstDate: firstDate ?? DateTime(1900),
-      lastDate: lastDate ?? DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF8B8B8B),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Color(0xFF8B8B8B),
-            ),
-            dialogBackgroundColor: Colors.white,
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF8B8B8B),
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (pickedDate != null) {
-      onDateSelected(pickedDate);
-    }
-  }
-
-   @override
+  @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -72,5 +41,47 @@ class DatePickerIconButton extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  Future<void> _showDatePicker(BuildContext context) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate ?? DateTime.now(),
+      firstDate: firstDate ?? DateTime(1900),
+      lastDate: lastDate ?? DateTime(2100),
+      locale: const Locale('ru', 'RU'), // Русская локаль
+      builder: (context, child) {
+        return Localizations.override(
+          context: context,
+          locale: const Locale('ru', 'RU'),
+          delegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          child: Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFF8B8B8B),
+                onPrimary: Colors.white,
+                surface: Colors.white,
+                onSurface: Color(0xFF8B8B8B),
+              ),
+              dialogBackgroundColor: Colors.white,
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF8B8B8B),
+                ),
+              ),
+            ),
+            child: child!,
+          ),
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      onDateSelected(pickedDate);
+    }
   }
 }

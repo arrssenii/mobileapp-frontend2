@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'auth_service.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../data/models/patient_model.dart';
 
@@ -253,7 +254,17 @@ class ApiClient {
 
   Future<Map<String, dynamic>> updateMedCard(String patId, Map<String, dynamic> data) async {
     return _handleApiCall(
-      () => _dio.put('/medcard/$patId', data: data).then((response) => response.data as Map<String, dynamic>),
+      () async {
+        final response = await _dio.put(
+          '/medcard/$patId', 
+          data: data,
+          options: Options(
+            contentType: Headers.jsonContentType,
+          ),
+        );
+
+        return response.data as Map<String, dynamic>;
+      },
       errorMessage: 'Ошибка обновления медкарты',
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart'; // Добавить эту строку
+import 'package:flutter/services.dart';
 import '../widgets/custom_form_field.dart';
 import '../widgets/date_picker_icon_button.dart';
 import '../widgets/section_header.dart'; 
@@ -20,28 +22,160 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   bool _isEditing = false;
   final Map<String, TextEditingController> _controllers = {};
   final _formKey = GlobalKey<FormState>();
+  late DateTime _birthDate; // Добавляем для редактирования даты рождения
+  Patient? _currentPatient;
+  bool _isMale = true; 
 
   @override
   void initState() {
     super.initState();
-    _patientFuture = _loadPatient();
+    _patientFuture = _loadPatient().then((patient) {
+      setState(() {
+        _currentPatient = patient;
+        _isMale = patient.isMale;
+      });
+      return patient;
+    });
   }
 
   Future<Patient> _loadPatient() async {
     final apiClient = Provider.of<ApiClient>(context, listen: false);
-    return await apiClient.getMedCardByPatientId(widget.patientId);
+    final patient = await apiClient.getMedCardByPatientId(widget.patientId);
+    // Инициализируем дату рождения
+    _birthDate = patient.birthDate; 
+    return patient;
+  }
+
+  Future<void> _saveChanges() async {
+    if (_currentPatient == null) return;
+    
+    final apiClient = Provider.of<ApiClient>(context, listen: false);
+    try {
+      final updatedData = {
+        "patient": {
+          "id": _currentPatient!.id,
+          "full_name": _controllers['fullName']!.text,
+          "birth_date": DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(
+            DateTime.utc(
+              _birthDate.year,
+              _birthDate.month,
+              _birthDate.day,
+            ),
+          ),
+          "is_male": _isMale,
+        },
+        "personal_info": {
+          "passport_series": '${_controllers['passportSeries']!.text} ${_controllers['passportNumber']!.text}',
+          "snils": _formatSnils(_controllers['snils']!.text),
+          "oms": _formatOms(_controllers['oms']!.text),
+        },
+        "contact_info": {
+          "phone": _controllers['phone']!.text,
+          "email": _controllers['email']!.text,
+          "address": _controllers['address']!.text,
+        },
+        "allergy": _controllers['contraindications']!.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .map((e) => {"name": e})
+            .toList(),
+      };
+
+      await apiClient.updateMedCard(widget.patientId, updatedData);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Данные успешно обновлены'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // Обновляем данные
+      setState(() {
+        _isEditing = false;
+        _patientFuture = _loadPatient().then((patient) {
+          _currentPatient = patient;
+          return patient;
+        });
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка сохранения: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _formatSnils(String input) {
+    final digits = input.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length < 11) return digits;
+    
+    return '${digits.substring(0, 3)}-${digits.substring(3, 6)}-'
+           '${digits.substring(6, 9)} ${digits.substring(9, 11)}';
+  }
+
+  // Форматирование ОМС (XXXX XXXX XXXX XXXX)
+  String _formatOms(String input) {
+    final digits = input.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length < 16) return digits;
+    
+    return '${digits.substring(0, 4)} ${digits.substring(4, 8)} '
+           '${digits.substring(8, 12)} ${digits.substring(12, 16)}';
   }
 
   void _initControllers(Patient patient) {
     _controllers['fullName'] = TextEditingController(text: patient.fullName);
+    _isMale = patient.isMale;
     _controllers['phone'] = TextEditingController(text: patient.phone);
     _controllers['email'] = TextEditingController(text: patient.email);
     _controllers['address'] = TextEditingController(text: patient.address);
     _controllers['snils'] = TextEditingController(text: patient.snils);
     _controllers['oms'] = TextEditingController(text: patient.oms);
-    _controllers['passport'] = TextEditingController(text: patient.passport);
+    _controllers['passportSeries'] = TextEditingController(text: patient.passportSeries);
+    _controllers['passportNumber'] = TextEditingController(text: patient.passportNumber);
     _controllers['contraindications'] = TextEditingController(
       text: patient.allergies.join(', ')
+    );
+  }
+
+  Widget _buildGenderField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: _isEditing
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Пол', style: TextStyle(fontWeight: FontWeight.w500)),
+                Row(
+                  children: [
+                    Radio<bool>(
+                      value: true,
+                      groupValue: _isMale,
+                      onChanged: (value) {
+                        setState(() => _isMale = value ?? true);
+                      },
+                    ),
+                    const Text('Мужской'),
+                    const SizedBox(width: 20),
+                    Radio<bool>(
+                      value: false,
+                      groupValue: _isMale,
+                      onChanged: (value) {
+                        setState(() => _isMale = !(value ?? false));
+                      },
+                    ),
+                    const Text('Женский'),
+                  ],
+                ),
+              ],
+            )
+          : ListTile(
+              title: const Text('Пол', style: TextStyle(fontWeight: FontWeight.w500)),
+              subtitle: Text(_isMale ? 'Мужской' : 'Женский'),
+            ),
     );
   }
 
@@ -104,6 +238,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     displayValue: patient.fullName,
                     isRequired: true,
                   ),
+
+                  _buildGenderField(),
                   
                   ListTile(
                     title: const Text('Пол', 
@@ -111,33 +247,37 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     subtitle: Text(patient.gender),
                   ),
                   
-                  ListTile(
-                    title: const Text('Дата рождения', 
-                      style: TextStyle(fontWeight: FontWeight.w500)),
-                    subtitle: Text(patient.formattedBirthDate),
-                  ),
+                  _buildBirthDateField(patient),
                   
                   SectionHeader(title: 'Документы'),
                   
                   _buildField(
                     label: 'СНИЛС',
                     valueKey: 'snils',
-                    displayValue: patient.snils,
-                    maxLength: 11,
+                    displayValue: _formatSnils(patient.snils),
+                    maxLength: 14, // XXX-XXX-XXX YY
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(11),
+                      _SnilsFormatter(),
+                    ],
                   ),
                   
+                  // ОМС с маской
                   _buildField(
                     label: 'Полис ОМС',
                     valueKey: 'oms',
-                    displayValue: patient.oms,
-                    maxLength: 16,
+                    displayValue: _formatOms(patient.oms),
+                    maxLength: 19, // XXXX XXXX XXXX XXXX
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(16),
+                      _OmsFormatter(),
+                    ],
                   ),
                   
-                  _buildField(
-                    label: 'Паспорт',
-                    valueKey: 'passport',
-                    displayValue: patient.passport,
-                  ),
+                  // Паспорт разделен на два поля
+                  _buildPassportFields(patient),
                   
                   SectionHeader(title: 'Контактная информация'),
                   
@@ -187,6 +327,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     int? maxLength,
     int? maxLines,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -198,6 +339,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               maxLines: maxLines,
               maxLength: maxLength,
               keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
             )
           : ListTile(
               title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -206,19 +348,123 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
+  Widget _buildBirthDateField(Patient patient) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: _isEditing
+          ? Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      labelText: 'Дата рождения',
+                      border: OutlineInputBorder(),
+                    ),
+                    controller: TextEditingController(
+                      text: DateFormat('dd.MM.yyyy').format(_birthDate),
+                    ),
+                    readOnly: true,
+                  ),
+                ),
+                DatePickerIconButton(
+                  initialDate: _birthDate,
+                  onDateSelected: (date) => setState(() => _birthDate = date),
+                  showDateText: false,
+                ),
+              ],
+            )
+          : ListTile(
+              title: Text('Дата рождения', 
+                         style: TextStyle(fontWeight: FontWeight.w500)),
+              subtitle: Text(patient.formattedBirthDate),
+            ),
+    );
+  }
+  
+  // Виджет для полей паспорта
+  Widget _buildPassportFields(Patient patient) {
+    return _isEditing
+        ? Column(
+            children: [
+              CustomFormField(
+                label: 'Серия паспорта',
+                controller: _controllers['passportSeries']!,
+                maxLength: 4,
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: 8),
+              CustomFormField(
+                label: 'Номер паспорта',
+                controller: _controllers['passportNumber']!,
+                maxLength: 6,
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          )
+        : ListTile(
+            title: Text('Паспорт', 
+                       style: TextStyle(fontWeight: FontWeight.w500)),
+            subtitle: Text(
+              patient.passportSeries.isNotEmpty && patient.passportNumber.isNotEmpty
+                  ? '${patient.passportSeries} ${patient.passportNumber}'
+                  : 'Не указан',
+            ),
+          );
+  }
+
   void _toggleEditMode() {
     if (_isEditing) {
       if (_formKey.currentState!.validate()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Изменения сохранены'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        setState(() => _isEditing = false);
+        _saveChanges(); // Вызываем сохранение данных
       }
     } else {
       setState(() => _isEditing = true);
     }
+  }
+}
+
+// Новые форматтеры для полей
+class _SnilsFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (text.isEmpty) return newValue;
+    
+    String formatted = '';
+    for (int i = 0; i < text.length; i++) {
+      if (i == 3 || i == 6) formatted += '-';
+      if (i == 9) formatted += ' ';
+      if (i < 11) formatted += text[i];
+    }
+    
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class _OmsFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (text.isEmpty) return newValue;
+    
+    String formatted = '';
+    for (int i = 0; i < text.length; i++) {
+      if (i == 4 || i == 8 || i == 12) formatted += ' ';
+      if (i < 16) formatted += text[i];
+    }
+    
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }

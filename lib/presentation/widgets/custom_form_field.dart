@@ -18,7 +18,7 @@ class CustomFormField extends StatelessWidget {
     this.maxLength,
     this.maxLines = 1,
     this.keyboardType = TextInputType.text,
-    this.inputFormatters,
+    this.inputFormatters, required String? Function(dynamic value) validator,
   });
 
   @override

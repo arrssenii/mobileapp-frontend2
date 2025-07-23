@@ -101,22 +101,14 @@ class _PatientListScreenState extends State<PatientListScreen> {
     });
 
     try {
-      // Проверяем наличие данных доктора
-      if (_apiClient.currentDoctor == null) {
-        throw Exception('Данные доктора не загружены');
-      }
-
-      // Получаем ID доктора
-      final docId = _apiClient.currentDoctor!.id.toString();
-
-      // Передаем ID в запрос
-      await _apiClient.createPatient({
-        'doctor_id': docId, // Добавляем ID доктора
+      // Формируем данные в соответствии с требуемой структурой
+      final patientPayload = {
         'full_name': patientData['fullName'],
         'birth_date': patientData['birthDate'],
         'is_male': patientData['gender'] == 'Мужской',
-      });
+      };
 
+      await _apiClient.createPatient(patientPayload);
       await _fetchPatients();
     } on ApiError catch (e) {
       setState(() {

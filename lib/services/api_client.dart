@@ -208,7 +208,13 @@ class ApiClient {
 
   Future<Map<String, dynamic>> createPatient(Map<String, dynamic> patientData) async {
     return _handleApiCall(
-      () => _dio.post('/patients/', data: patientData).then((response) => response.data as Map<String, dynamic>),
+      () => _dio.post(
+        '/patients/', 
+        data: patientData,
+        options: Options(
+          contentType: Headers.jsonContentType,
+        ),
+      ).then((response) => response.data as Map<String, dynamic>),
       errorMessage: 'Ошибка создания пациента',
     );
   }
@@ -232,14 +238,14 @@ class ApiClient {
     return _handleApiCall(
       () async {
         final response = await _dio.get('/hospital/receptions/patients/$patientId');
-        
+
         // Правильно извлекаем данные из вложенной структуры
         if (response.data is! Map<String, dynamic> || 
             response.data['data'] == null ||
             response.data['data']['hits'] == null) {
           throw ApiError(message: 'Некорректный формат ответа сервера');
         }
-        
+
         return response.data['data']['hits'] as List<dynamic>;
       },
       errorMessage: 'Ошибка загрузки истории приёмов пациента',

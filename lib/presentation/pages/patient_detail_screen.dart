@@ -236,6 +236,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     label: 'ФИО',
                     valueKey: 'fullName',
                     displayValue: patient.fullName,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите ФИО пациента';
+                      }
+                      return null;
+                    },
                     isRequired: true,
                   ),
 
@@ -256,6 +262,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     valueKey: 'snils',
                     displayValue: _formatSnils(patient.snils),
                     maxLength: 14, // XXX-XXX-XXX YY
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите номер СНИЛСа';
+                      }
+                      return null;
+                    },
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(11),
@@ -269,6 +281,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     valueKey: 'oms',
                     displayValue: _formatOms(patient.oms),
                     maxLength: 19, // XXXX XXXX XXXX XXXX
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите номер полиса ОМС';
+                      }
+                      return null;
+                    },
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(16),
@@ -286,6 +304,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     valueKey: 'phone',
                     displayValue: patient.phone,
                     keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите номер телефона';
+                      }
+                      return null;
+                    },
                   ),
                   
                   _buildField(
@@ -293,6 +317,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     valueKey: 'email',
                     displayValue: patient.email,
                     keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите email';
+                      }
+                      return null;
+                    },
                   ),
                   
                   _buildField(
@@ -300,6 +330,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     valueKey: 'address',
                     displayValue: patient.address,
                     maxLines: 2,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите адрес';
+                      }
+                      return null;
+                    },
                   ),
                   
                   SectionHeader(title: 'Медицинская информация'),
@@ -309,6 +345,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     valueKey: 'contraindications',
                     displayValue: patient.allergies.join(', '),
                     maxLines: 3,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Введите ФИО пациента';
+                      }
+                      return null;
+                    },
                   ),
                 ],
               ),
@@ -323,6 +365,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     required String label,
     required String valueKey,
     required String displayValue,
+    required String? Function(dynamic) validator,
     bool isRequired = false,
     int? maxLength,
     int? maxLines,
@@ -340,6 +383,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               maxLength: maxLength,
               keyboardType: keyboardType,
               inputFormatters: inputFormatters,
+              validator: validator,
             )
           : ListTile(
               title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -391,6 +435,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 controller: _controllers['passportSeries']!,
                 maxLength: 4,
                 keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Введите серию паспорта';
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: 8),
               CustomFormField(
@@ -398,6 +448,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 controller: _controllers['passportNumber']!,
                 maxLength: 6,
                 keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Введите номер паспорта';
+                  }
+                  return null;
+                },
               ),
             ],
           )

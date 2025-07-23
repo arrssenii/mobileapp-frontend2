@@ -163,6 +163,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           patientName: patient['name'],
           appointmentType: 'call',
           recordId: patient['id'],
+          specialization: 'Терапевт',
         ),
       ),
     ).then((result) {

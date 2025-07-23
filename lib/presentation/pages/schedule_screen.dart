@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:demo_app/services/api_client.dart'; // Добавлен импорт
 import 'package:demo_app/data/models/appointment_model.dart';
-import 'package:demo_app/presentation/pages/patient_detail_screen.dart';
-import 'package:demo_app/presentation/pages/consultation_screen.dart';
+import 'patient_detail_screen.dart';
+import 'consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
 import '../widgets/action_tile.dart';
 import '../widgets/date_carousel.dart';
@@ -79,6 +79,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       setState(() {
         _appointments = hits.map((hit) {
           final patient = hit['patient'] as Map<String, dynamic>? ?? {};
+          final doctor = hit['doctor'] as Map<String, dynamic>? ?? {};
           final birthDate = _parseBirthDate(patient['birth_date']);
 
           return Appointment(
@@ -91,6 +92,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             status: _parseStatus(hit['status'] ?? 'scheduled'),
             birthDate: birthDate,
             isMale: patient['is_male'] ?? true,
+            specialization: doctor['specialization'] ?? 'Терапевт',
           );
         }).toList();
       });
@@ -242,6 +244,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           patientName: appointment.patientName,
           appointmentType: 'appointment',
           recordId: appointment.id,
+          specialization: appointment.specialization, // Добавлено
         ),
       ),
     ).then((result) {

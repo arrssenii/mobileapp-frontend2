@@ -1,4 +1,7 @@
+// pages/patient_history_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:demo_app/services/api_client.dart';
 
 class PatientHistoryScreen extends StatefulWidget {
   final int patientId;
@@ -15,7 +18,9 @@ class PatientHistoryScreen extends StatefulWidget {
 }
 
 class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
-  final List<Map<String, dynamic>> _visits = [];
+  List<Map<String, dynamic>> _visits = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -23,28 +28,65 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
     _loadVisits();
   }
 
-  void _loadVisits() {
-    // Фиктивные данные посещений
-    _visits.addAll([
-      {
-        'date': '12.05.2023',
-        'specialist': 'Терапевт Иванова А.П.',
-        'diagnosis': 'ОРВИ, острая форма',
-        'recommendations': 'Постельный режим, обильное питье, прием жаропонижающих',
-      },
-      {
-        'date': '28.07.2023',
-        'specialist': 'Хирург Петров С.Д.',
-        'diagnosis': 'Консультация после операции',
-        'recommendations': 'Обработка шва, ограничение физических нагрузок',
-      },
-      {
-        'date': '15.09.2023',
-        'specialist': 'Кардиолог Сидорова Е.К.',
-        'diagnosis': 'Контрольный осмотр',
-        'recommendations': 'Продолжить прием препаратов, контроль АД',
-      },
-    ]);
+  Future<void> _loadVisits() async {
+    final apiClient = Provider.of<ApiClient>(context, listen: false);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+  
+    try {
+      final patientId = widget.patientId.toString();
+      final historyData = await apiClient.getPatientReceptionsHistory(patientId);
+      
+      final visits = historyData.map((reception) {
+        final doctor = reception['doctor'] as Map<String, dynamic>?;
+        final specialization = doctor?['specialization'] as Map<String, dynamic>?;
+        
+        return {
+          'date': _formatDate(reception['date']?.toString() ?? ''),
+          'doctor': doctor?['full_name']?.toString() ?? 'Неизвестный специалист',
+          'specialization': specialization?['title']?.toString() ?? 'Специализация не указана',
+          'diagnosis': reception['diagnosis']?.toString() ?? 'Диагноз не указан',
+          'recommendations': reception['recommendations']?.toString() ?? 'Рекомендации не указаны',
+        };
+      }).toList();
+  
+      setState(() {
+        _visits = visits;
+        _isLoading = false;
+      });
+    } on ApiError catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка: ${e.message}';
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      // Удаляем временную зону для корректного парсинга
+      final cleanedDate = dateString.replaceFirst(RegExp(r'\+.*'), '');
+      final dateTime = DateTime.parse(cleanedDate);
+
+      // Форматируем дату и время
+      final date = '${dateTime.day.toString().padLeft(2, '0')}.'
+                   '${dateTime.month.toString().padLeft(2, '0')}.'
+                   '${dateTime.year}';
+
+      final time = '${dateTime.hour.toString().padLeft(2, '0')}:'
+                   '${dateTime.minute.toString().padLeft(2, '0')}';
+
+      return '$date в $time';
+    } catch (e) {
+      return dateString;
+    }
   }
 
   @override
@@ -55,13 +97,19 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
         backgroundColor: const Color(0xFF8B8B8B),
         foregroundColor: Colors.white,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _visits.length,
-        itemBuilder: (context, index) {
-          return _buildVisitCard(_visits[index]);
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(child: Text(_errorMessage!))
+              : _visits.isEmpty
+                  ? const Center(child: Text('История посещений пуста'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _visits.length,
+                      itemBuilder: (context, index) {
+                        return _buildVisitCard(_visits[index]);
+                      },
+                    ),
     );
   }
 
@@ -74,42 +122,88 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Дата и специалист
+            // Дата
+            Text(
+              visit['date'],
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Информация о враче
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  visit['date'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  visit['specialist'],
-                  style: const TextStyle(
-                    color: Colors.blue,
-                    fontStyle: FontStyle.italic,
+                const Icon(Icons.person, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        visit['doctor'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        visit['specialization'],
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Диагноз
-            const Text(
-              'Диагноз:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.medical_services, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Диагноз:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      Text(visit['diagnosis']),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Text(visit['diagnosis']),
-            const SizedBox(height: 10),
-            
+            const SizedBox(height: 12),
+
             // Рекомендации
-            const Text(
-              'Рекомендации:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.receipt, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Рекомендации:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(visit['recommendations']),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Text(visit['recommendations']),
           ],
         ),
       ),

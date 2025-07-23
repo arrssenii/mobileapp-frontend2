@@ -227,6 +227,25 @@ class ApiClient {
     );
   }
 
+  // services/api_client.dart
+  Future<List<dynamic>> getPatientReceptionsHistory(String patientId) async {
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get('/hospital/receptions/patients/$patientId');
+        
+        // Правильно извлекаем данные из вложенной структуры
+        if (response.data is! Map<String, dynamic> || 
+            response.data['data'] == null ||
+            response.data['data']['hits'] == null) {
+          throw ApiError(message: 'Некорректный формат ответа сервера');
+        }
+        
+        return response.data['data']['hits'] as List<dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки истории приёмов пациента',
+    );
+  }
+
   // Медкарты
   // services/api_client.dart
   Future<Patient> getMedCardByPatientId(String patId) async {

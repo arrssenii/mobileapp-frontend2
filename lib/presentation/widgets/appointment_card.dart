@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:demo_app/data/models/appointment_model.dart'; // Добавлен импорт модели
+import 'package:intl/intl.dart';
 
 class AppointmentCard extends StatelessWidget {
   final Appointment appointment;
@@ -75,22 +76,41 @@ class AppointmentCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          appointment.patientName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold, 
-                            fontSize: 16
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              appointment.patientName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 16
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '(${appointment.isMale ? 'М' : 'Ж'})',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${DateFormat('dd.MM.yyyy').format(appointment.birthDate)}',
+                          style: const TextStyle(fontSize: 13, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           appointment.diagnosis,
                           style: const TextStyle(fontSize: 14),
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
                         Text(
                           appointment.address,
-                          style: const TextStyle(color: Colors.grey),
+                          style: const TextStyle(fontSize: 13, color: Colors.grey),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

@@ -16,10 +16,11 @@ class CallDetailScreen extends StatefulWidget {
 class _CallDetailScreenState extends State<CallDetailScreen> {
   @override
   Widget build(BuildContext context) {
-    final completedCount = widget.call['patients']
+    final patients = widget.call['patients'] as List<dynamic>;
+    final completedCount = patients
         .where((patient) => patient['hasConclusion'] == true)
         .length;
-    final totalPatients = widget.call['patients'].length;
+    final totalPatients = patients.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -61,7 +62,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Врач: ${widget.call['doctor']}',
+                    'Телефон: ${widget.call['phone']}',
                     style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 8),
@@ -85,9 +86,9 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
-                itemCount: widget.call['patients'].length,
+                itemCount: patients.length,
                 itemBuilder: (context, index) {
-                  final patient = widget.call['patients'][index];
+                  final patient = patients[index];
                   return _buildPatientCard(patient);
                 },
               ),
@@ -125,21 +126,29 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           size: 32,
         ),
         title: Text(
-          patient['name'],
+          'Пациент ${patient['id']}',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        subtitle: patient['hasConclusion']
-            ? const Text('Консультация завершена', style: TextStyle(color: Colors.green))
-            : const Text('Требуется консультация', style: TextStyle(color: Colors.orange)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Телефон: ${patient['phone']}'),
+            const SizedBox(height: 4),
+            Text(
+              patient['hasConclusion'] 
+                  ? 'Консультация завершена' 
+                  : 'Требуется консультация',
+              style: TextStyle(
+                color: patient['hasConclusion'] ? Colors.green : Colors.orange,
+              ),
+            ),
+          ],
+        ),
         trailing: patient['hasConclusion']
             ? null
             : ElevatedButton(
                 child: const Text('Консультация'),
                 onPressed: () => _startConsultation(patient),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                ),
               ),
         onTap: () => _showPatientOptions(patient),
       ),

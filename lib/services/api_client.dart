@@ -291,7 +291,7 @@ class ApiClient {
   }
 
   // Приёмы в стационаре
-  Future<List<dynamic>> getReceptionsHospitalByDoctorAndDate(
+  Future<Map<String, dynamic>> getReceptionsHospitalByDoctorAndDate(
     String docId, {
     required DateTime date,
     int page = 1,
@@ -302,19 +302,13 @@ class ApiClient {
         final response = await _dio.get(
           '/hospital/receptions/$docId',
           queryParameters: {
-            'filter': 'date.eq.$formattedDate', // Измененный параметр фильтра
+            'filter': 'date.eq.$formattedDate',
             'page': page,
           },
         );
         
-        // Проверяем структуру ответа
-        if (response.data is! Map<String, dynamic> || 
-            response.data['data'] == null ||
-            response.data['data']['hits'] == null) {
-          throw ApiError(message: 'Некорректный формат ответа сервера');
-        }
-        
-        return response.data['data']['hits'] as List<dynamic>;
+        // Возвращаем ВЕСЬ объект ответа
+        return response.data as Map<String, dynamic>;
       },
       errorMessage: 'Ошибка загрузки приёмов в стационаре',
     );
@@ -361,26 +355,25 @@ class ApiClient {
 
   // Звонки СМП
   Future<List<dynamic>> getEmergencyCallsByDoctorAndDate(
-  String docId, {
-  required DateTime date,
-  int page = 1,
-}) async {
-  final formattedDate = _formatDate(date);
-  return _handleApiCall(
-    () async {
-      final response = await _dio.get(
-        '/emergency/$docId',
-        queryParameters: {
-          'date': formattedDate,
-          'page': page,
-        },
-      );
-      // Исправлено: берем данные из поля 'hits' вместо 'data'
-      return response.data['hits'] as List<dynamic>;
-    },
-    errorMessage: 'Ошибка загрузки звонков СМП',
-  );
-}
+    String docId, {
+    required DateTime date,
+    int page = 1,
+  }) async {
+    final formattedDate = _formatDate(date);
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get(
+          '/emergency/$docId',
+          queryParameters: {
+            'date': formattedDate,
+            'page': page,
+          },
+        );
+        return response.data['hits'] as List<dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки звонков СМП',
+    );
+  }
 
   // Вспомогательные методы
   String _formatDate(DateTime date) {

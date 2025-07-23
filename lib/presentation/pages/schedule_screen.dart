@@ -67,22 +67,30 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
 
     try {
-      final hits = await _apiClient.getReceptionsHospitalByDoctorAndDate(
+      final response = await _apiClient.getReceptionsHospitalByDoctorAndDate(
         doctorId,
         date: _selectedDate,
         page: 1,
       );
 
+      // Получаем данные из нового пути
+      final hits = response['data']['hits'] as List<dynamic>;
+
       setState(() {
         _appointments = hits.map((hit) {
+          final patient = hit['patient'] as Map<String, dynamic>? ?? {};
+          final birthDate = _parseBirthDate(patient['birth_date']);
+
           return Appointment(
             id: hit['id'] ?? 0,
-            patientId: hit['patient_id'] ?? 0,
-            patientName: hit['patient_name'] ?? 'Неизвестный пациент',
+            patientId: patient['id'] ?? 0,
+            patientName: patient['full_name'] ?? 'Неизвестный пациент',
             diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
-            address: hit['address'] ?? 'Адрес не указан',
+            address: _getAddressFromPatient(patient), // метод для получения адреса
             time: _parseDateTime(hit['date']),
-            status: _parseStatus(hit['status'] ?? 'Запланирован'),
+            status: _parseStatus(hit['status'] ?? 'scheduled'),
+            birthDate: birthDate,
+            isMale: patient['is_male'] ?? true,
           );
         }).toList();
       });
@@ -100,13 +108,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       });
     }
   }
+
+  String _getAddressFromPatient(Map<String, dynamic> patient) {
+    // Временное решение - можно расширить при наличии данных
+    return patient['address']?.toString() ?? 
+           patient['city']?.toString() ?? 
+           'Адрес не указан';
+  }
+
   AppointmentStatus _parseStatus(String status) {
-    switch (status) {
-      case 'Завершен':
+    switch (status.toLowerCase()) {
+      case 'completed':
         return AppointmentStatus.completed;
-      case 'Не явился':
+      case 'cancelled':
+      case 'no_show':
         return AppointmentStatus.noShow;
-      case 'Запланирован':
+      case 'scheduled':
       default:
         return AppointmentStatus.scheduled;
     }
@@ -118,24 +135,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   DateTime _parseDateTime(String? dateString) {
     if (dateString == null) return DateTime.now();
-
     try {
-      // Используем регулярное выражение для надежного парсинга
-      final dateRegex = RegExp(r'(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})');
-      final match = dateRegex.firstMatch(dateString);
-
-      if (match != null) {
-        return DateTime(
-          int.parse(match.group(3)!), // год
-          int.parse(match.group(2)!), // месяц
-          int.parse(match.group(1)!), // день
-          int.parse(match.group(4)!), // час
-          int.parse(match.group(5)!), // минуты
-        );
-      }
-      return DateTime.now();
+      return DateTime.parse(dateString).toLocal();
     } catch (e) {
       return DateTime.now();
+    }
+  }
+
+  DateTime _parseBirthDate(dynamic birthDate) {
+    if (birthDate == null) return DateTime(2000);
+    try {
+      return DateTime.parse(birthDate).toLocal();
+    } catch (e) {
+      return DateTime(2000);
     }
   }
 

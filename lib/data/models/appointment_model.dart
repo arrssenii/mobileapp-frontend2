@@ -11,6 +11,8 @@ class Appointment {
   final String diagnosis;
   final String address;
   final DateTime time;
+  final DateTime birthDate; // Добавим дату рождения
+  final bool isMale;
   AppointmentStatus status;
 
   Appointment({
@@ -20,6 +22,8 @@ class Appointment {
     required this.diagnosis,
     required this.address,
     required this.time,
+    required this.birthDate,
+    required this.isMale,
     this.status = AppointmentStatus.scheduled,
   });
 }

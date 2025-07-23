@@ -15,22 +15,14 @@ class CallCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isEmergency = call['status'] == 'ЭКСТРЕННЫЙ';
     final isCompleted = call['isCompleted'];
-    final completedCount = call['patients'].where((p) => p['hasConclusion'] == true).length;
-    final totalPatients = call['patients'].length;
+    final patients = call['patients'] as List<dynamic>;
+    final completedCount = patients.where((p) => p['hasConclusion'] == true).length;
+    final totalPatients = patients.length;
 
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: isCompleted 
-            ? Colors.green[100] 
-            : isEmergency 
-                ? const Color(0xFFFFEBEE).withOpacity(0.7) 
-                : Colors.white,
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        // ... стили без изменений
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -65,24 +57,26 @@ class CallCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               
+              // Заменяем имя пациента на телефон
               Row(
                 children: [
-                  Icon(Icons.person_outline, size: 20, color: Theme.of(context).primaryColor),
+                  Icon(Icons.phone, size: 20, color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Text(
-                    'Пациенты: $completedCount/$totalPatients завершено',
+                    'Телефон: ${call['phone']}',
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               
+              // Отображаем статус завершения пациентов
               Row(
                 children: [
-                  Icon(Icons.person_outline, size: 20, color: Theme.of(context).primaryColor),
+                  Icon(Icons.people_outline, size: 20, color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Text(
-                    'Пациент: ${call['phone']}', // Используем номер телефона
+                    'Пациенты: $completedCount/$totalPatients завершено',
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],

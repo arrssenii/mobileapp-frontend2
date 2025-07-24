@@ -136,8 +136,8 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
             const SizedBox(height: 4),
             Text(
               patient['hasConclusion'] 
-                  ? 'Консультация завершена' 
-                  : 'Требуется консультация',
+                  ? 'Обследование завершено' 
+                  : 'Требуется обследование',
               style: TextStyle(
                 color: patient['hasConclusion'] ? Colors.green : Colors.orange,
               ),
@@ -147,7 +147,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
         trailing: patient['hasConclusion']
             ? null
             : ElevatedButton(
-                child: const Text('Консультация'),
+                child: const Text('Заключение'),
                 onPressed: () => _startConsultation(patient),
               ),
         onTap: () => _showPatientOptions(patient),
@@ -163,7 +163,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           patientName: patient['name'],
           appointmentType: 'call',
           recordId: patient['id'],
-          specialization: 'Терапевт',
+          doctorId: 1,
         ),
       ),
     ).then((result) {
@@ -230,7 +230,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           ),
           if (!patient['hasConclusion'])
             TextButton(
-              child: const Text('Начать консультацию'),
+              child: const Text('Начать обследование'),
               onPressed: () {
                 Navigator.pop(context);
                 _startConsultation(patient);

@@ -97,6 +97,30 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getReceptionDetails(
+    String doctorId, 
+    String receptionId,
+    ) async {
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get(
+          '/hospital/receptions/$doctorId/$receptionId',
+        );
+        
+        if (response.statusCode != 200) {
+          throw ApiError(
+            statusCode: response.statusCode,
+            message: 'Ошибка сервера: ${response.statusCode}',
+            rawError: response.data,
+          );
+        }
+        
+        return response.data as Map<String, dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки деталей приёма',
+    );
+  }
+
   Future<Map<String, dynamic>> loginDoctor(Map<String, dynamic> credentials) async {
     try {
       final response = await _dio.post('/auth', data: credentials);
@@ -191,7 +215,7 @@ class ApiClient {
   Future<List<dynamic>> getAllPatients(String docId) async {
     return _handleApiCall(
       () async {
-        final response = await _dio.get('/patients/$docId');
+        final response = await _dio.get('/patients');
         // Достаем пациентов из data->hits
         return response.data['data']['hits'] as List<dynamic>;
       },

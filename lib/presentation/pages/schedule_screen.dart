@@ -237,6 +237,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _openConsultationScreen(BuildContext context, Appointment appointment) {
+    final apiClient = Provider.of<ApiClient>(context, listen: false);
+    final doctorId = apiClient.currentDoctorId?.toString() ?? '0';
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -244,7 +247,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           patientName: appointment.patientName,
           appointmentType: 'appointment',
           recordId: appointment.id,
-          specialization: appointment.specialization, // Добавлено
+          doctorId: int.parse(doctorId), // Добавляем doctorId
         ),
       ),
     ).then((result) {

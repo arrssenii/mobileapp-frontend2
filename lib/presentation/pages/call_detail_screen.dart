@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+import 'package:provider/provider.dart';
 import 'consultation_screen.dart';
 import 'patient_detail_screen.dart';
 import '../widgets/custom_card.dart';
@@ -14,8 +16,60 @@ class CallDetailScreen extends StatefulWidget {
 }
 
 class _CallDetailScreenState extends State<CallDetailScreen> {
+  bool _isLoading = true;
+  String? _errorMessage;
+  Map<String, dynamic>? _callDetails;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCallDetails();
+  }
+
+  Future<void> _loadCallDetails() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final apiClient = Provider.of<ApiClient>(context, listen: false);
+      final callDetails = await apiClient.getEmergencyCallDetails(widget.call['id'].toString());
+      
+      setState(() {
+        _callDetails = callDetails;
+        // Обновляем исходный вызов новыми данными
+        widget.call.addAll({
+          'patients': _transformPatientsData(callDetails['data']['hits']),
+          'isCompleted': false, // Пока не знаем статус завершения
+        });
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка загрузки деталей вызова: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _transformPatientsData(List<dynamic> patientsData) {
+    return patientsData.map((patient) {
+      return {
+        'id': patient['id'],
+        'name': patient['patient']['full_name'] ?? 'Пациент ${patient['id']}',
+        'hasConclusion': false, // По умолчанию не завершен
+        'diagnosis': patient['diagnosis'] ?? '',
+        'recommendations': patient['recommendations'] ?? '',
+      };
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final displayCall = _callDetails != null 
+        ? {...widget.call, ..._callDetails!} 
+        : widget.call;
     final patients = widget.call['patients'] as List<dynamic>;
     final completedCount = patients
         .where((patient) => patient['hasConclusion'] == true)
@@ -161,16 +215,17 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       MaterialPageRoute(
         builder: (context) => ConsultationScreen(
           patientName: patient['name'],
-          appointmentType: 'call',
+          appointmentType: 'emergency', // Указываем тип вызова
           recordId: patient['id'],
           doctorId: 1,
+          emergencyCallId: widget.call['id'], // Добавляем ID вызова
         ),
       ),
     ).then((result) {
       if (result != null && result == true) {
         setState(() {
           patient['hasConclusion'] = true;
-          _checkCallCompletion();
+          _updateCallStatusIfCompleted();
         });
       }
     });
@@ -212,6 +267,39 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  void _updateCallStatusIfCompleted() async {
+    final allCompleted = widget.call['patients']
+        .every((patient) => patient['hasConclusion'] == true);
+        
+    if (allCompleted) {
+      try {
+        final apiClient = Provider.of<ApiClient>(context, listen: false);
+        await apiClient.updateEmergencyCallStatus(
+          widget.call['id'].toString(),
+          'completed'
+        );
+        
+        setState(() {
+          widget.call['isCompleted'] = true;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Вызов успешно завершен!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка обновления статуса вызова: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showPatientOptions(Map<String, dynamic> patient) {

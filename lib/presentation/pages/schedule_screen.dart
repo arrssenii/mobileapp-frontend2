@@ -81,15 +81,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           final patient = hit['patient'] as Map<String, dynamic>? ?? {};
           final doctor = hit['doctor'] as Map<String, dynamic>? ?? {};
           final birthDate = _parseBirthDate(patient['birth_date']);
-
+      
           return Appointment(
             id: hit['id'] ?? 0,
             patientId: patient['id'] ?? 0,
             patientName: patient['full_name'] ?? 'Неизвестный пациент',
             diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
-            address: _getAddressFromPatient(patient), // метод для получения адреса
+            address: _getAddressFromPatient(patient),
             time: _parseDateTime(hit['date']),
-            status: _parseStatus(hit['status'] ?? 'scheduled'),
+            status: _parseStatus(hit['status'] ?? 'scheduled'), // Используем парсинг
             birthDate: birthDate,
             isMale: patient['is_male'] ?? true,
             specialization: doctor['specialization'] ?? 'Терапевт',
@@ -108,6 +108,54 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _markAsNoShow(Appointment appointment) async {
+    final originalStatus = appointment.status;
+    
+    // Создаем новый объект с обновленным статусом
+    final updatedAppointment = Appointment(
+      id: appointment.id,
+      patientId: appointment.patientId,
+      patientName: appointment.patientName,
+      diagnosis: appointment.diagnosis,
+      address: appointment.address,
+      time: appointment.time,
+      status: AppointmentStatus.noShow, // Новый статус
+      birthDate: appointment.birthDate,
+      isMale: appointment.isMale,
+      specialization: appointment.specialization,
+    );
+  
+    // Находим индекс старого appointment
+    final index = _appointments.indexOf(appointment);
+    
+    if (index != -1) {
+      setState(() {
+        _appointments[index] = updatedAppointment;
+      });
+    }
+  
+    try {
+      await _apiClient.updateReceptionStatus(
+        appointment.id,
+        status: 'no_show',
+      );
+    } catch (e) {
+      // В случае ошибки возвращаем предыдущий статус
+      if (index != -1) {
+        setState(() {
+          _appointments[index] = appointment;
+        });
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка обновления: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -138,7 +186,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _parseDateTime(String? dateString) {
     if (dateString == null) return DateTime.now();
     try {
-      return DateTime.parse(dateString).toLocal();
+      final parsed = DateTime.parse(dateString).toLocal();
+      // Проверяем на некорректную дату (0001-01-01)
+      if (parsed.year == 1) return DateTime.now();
+      return parsed;
     } catch (e) {
       return DateTime.now();
     }
@@ -147,7 +198,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _parseBirthDate(dynamic birthDate) {
     if (birthDate == null) return DateTime(2000);
     try {
-      return DateTime.parse(birthDate).toLocal();
+      final parsed = DateTime.parse(birthDate).toLocal();
+      if (parsed.year < 1900) return DateTime(2000);
+      return parsed;
     } catch (e) {
       return DateTime(2000);
     }
@@ -198,12 +251,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ),
                   ActionTile(
                     icon: Icons.close,
-                    title: 'Не явился',
+                    title: 'Отменён',
                     onTap: () {
-                      setState(() {
-                        appointment.status = AppointmentStatus.noShow;
-                      });
                       Navigator.pop(context);
+                      _markAsNoShow(appointment);
                     },
                   ),
                   const SizedBox(height: 8),

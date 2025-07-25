@@ -9,6 +9,7 @@ class ConsultationScreen extends StatefulWidget {
   final String appointmentType;
   final int recordId;
   final int doctorId;
+  final int? emergencyCallId; // Добавляем новый параметр
 
   const ConsultationScreen({
     super.key,
@@ -16,6 +17,7 @@ class ConsultationScreen extends StatefulWidget {
     required this.appointmentType,
     required this.recordId,
     required this.doctorId,
+    this.emergencyCallId, // Делаем необязательным
   });
 
   @override
@@ -28,6 +30,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   String? _documentType;
+  List<Map<String, dynamic>> _medServices = [];
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -36,27 +39,113 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     _loadConsultationData();
   }
 
+  Future<void> _completeEmergencyConsultation() async {
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Пожалуйста, заполните все обязательные поля')),
+      );
+      return;
+    }
+  
+    try {
+      final apiClient = Provider.of<ApiClient>(context, listen: false);
+      
+      // Формируем данные для отправки
+      final specializationData = {
+        'document_type': _documentType,
+        'fields': _fields.map((field) {
+          return {
+            'name': field.name,
+            'value': _formValues[field.name],
+          };
+        }).toList(),
+      };
+  
+      // Подготавливаем медицинские услуги
+      final medServices = _medServices.map((service) {
+        return {
+          'id': service['id'],
+          'name': service['name'],
+          'price': service['price'],
+        };
+      }).toList();
+  
+      // Вычисляем итоговую стоимость
+      final totalCost = _medServices.fold(0, (sum, service) => sum + (service['price'] as int));
+  
+      // Создаем заключение
+      await apiClient.createEmergencyReception({
+        'doctor_id': widget.doctorId,
+        'patient_id': widget.recordId,
+        'emergency_call_id': widget.emergencyCallId!,
+        'diagnosis': _formValues['diagnosis'] ?? '',
+        'recommendations': _formValues['recommendations'] ?? '',
+        'specialization_data': specializationData,
+        'med_services': medServices,
+        'total_cost': totalCost, // Добавляем итоговую стоимость
+      });
+  
+      if (!mounted) return;
+      Navigator.pop(context, true);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Заключение успешно создано!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка сохранения: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _loadConsultationData() async {
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
-      final response = await apiClient.getReceptionDetails(
-        widget.doctorId.toString(),
-        widget.recordId.toString(),
-      );
+      Map<String, dynamic> response;
 
-      final data = response['data'] as Map<String, dynamic>;
+      if (widget.appointmentType == 'emergency') {
+        response = await apiClient.getEmergencyConsultationData(
+          widget.emergencyCallId.toString(),
+          widget.recordId.toString(),
+        );
+      } else {
+        response = await apiClient.getReceptionDetails(
+          widget.doctorId.toString(),
+          widget.recordId.toString(),
+        );
+      }
+
+      final data = response['data'] as Map<String, dynamic>? ?? {};
       final specData = data['specialization_data'] as Map<String, dynamic>? ?? {};
-      
+
+      // Извлекаем медицинские услуги
+      final medServices = data['med_services'] as List<dynamic>? ?? [];
+
       setState(() {
         _documentType = specData['document_type'] as String?;
         final fields = specData['fields'] as List<dynamic>? ?? [];
         _fields = fields.map((f) => DynamicField.fromJson(f)).toList();
-        
+
+        // Сохраняем медицинские услуги
+        _medServices = medServices.map((service) {
+          return {
+            'id': service['id'],
+            'name': service['name'],
+            'price': service['price'],
+          };
+        }).toList();
+
         // Инициализируем значения формы
         for (var field in _fields) {
           _formValues[field.name] = field.value ?? field.defaultValue ?? _getDefaultForType(field.type);
         }
-        
+
         _isLoading = false;
       });
     } catch (e) {
@@ -91,6 +180,104 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     );
   }
 
+  Widget _buildMedServicesSection() {
+    if (_medServices.isEmpty) {
+      return const SizedBox(); // Не отображать если услуг нет
+    }
+
+    // Вычисляем итоговую стоимость
+    final totalCost = _medServices.fold(0, (sum, service) => sum + (service['price'] as int));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            const Icon(Icons.medical_services, color: Colors.blue),
+            const SizedBox(width: 8),
+            const Text(
+              'Медицинские услуги',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Список услуг
+        ..._medServices.map((service) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.medical_information, size: 20, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Text(
+                        service['name'],
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${service['price']} руб.',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+
+        // Разделитель
+        const Divider(height: 30, thickness: 1.5, color: Colors.grey),
+
+        // Итоговая стоимость
+        Padding(
+          padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Общая стоимость:',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green),
+                ),
+                child: Text(
+                  '$totalCost руб.',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDynamicForm() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -103,10 +290,13 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            
+
             // Динамические поля
             ..._fields.map((field) => _buildField(field)).toList(),
-            
+
+            // Медицинские услуги
+            _buildMedServicesSection(),
+
             // Кнопка сохранения
             const SizedBox(height: 30),
             ElevatedButton(
@@ -499,51 +689,55 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   Future<void> _completeConsultation() async {
-    if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пожалуйста, заполните все обязательные поля')),
-      );
-      return;
+    if (widget.appointmentType == 'emergency') {
+      await _completeEmergencyConsultation();
+    } else {
+      if (!_formKey.currentState!.validate()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Пожалуйста, заполните все обязательные поля')),
+        );
+        return;
+      }
+
+      try {
+        final apiClient = Provider.of<ApiClient>(context, listen: false);
+
+        // Формируем данные для отправки
+        final specializationData = {
+          'document_type': _documentType,
+          'fields': _fields.map((field) {
+            return {
+              'name': field.name,
+              'value': _formValues[field.name],
+            };
+          }).toList(),
+        };
+
+        await apiClient.updateReceptionHospital(
+          widget.recordId.toString(),
+          {
+            'status': 'completed',
+            'specialization_data': specializationData,
+          },
+        );
+
+        if (!mounted) return;
+        Navigator.pop(context, true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Консультация успешно завершена!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка сохранения: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-
-    try {
-      final apiClient = Provider.of<ApiClient>(context, listen: false);
-      
-      // Формируем данные для отправки
-      final specializationData = {
-        'document_type': _documentType,
-        'fields': _fields.map((field) {
-          return {
-            'name': field.name,
-            'value': _formValues[field.name],
-          };
-        }).toList(),
-      };
-
-      await apiClient.updateReceptionHospital(
-        widget.recordId.toString(),
-        {
-          'status': 'completed',
-          'specialization_data': specializationData,
-        },
-      );
-
-      if (!mounted) return;
-      Navigator.pop(context, true);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Консультация успешно завершена!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ошибка сохранения: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  } 
 }

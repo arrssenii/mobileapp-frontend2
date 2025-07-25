@@ -68,35 +68,25 @@ class _CallsScreenState extends State<CallsScreen> {
   }
 
   List<Map<String, dynamic>> _transformApiData(List<dynamic> apiData) {
-    return apiData.map((call) {
-      final createdAt = DateTime.parse(call['created_at']);
-      final time = '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
-      
-      // Определяем статус вызова по полю emergency
-      final status = call['emergency'] == true ? 'ЭКСТРЕННЫЙ' : 'НЕОТЛОЖНЫЙ';
-      
-      // Пока нет информации о завершенности вызова
-      final isCompleted = false;
-      
-      return {
-        'id': call['id'],
-        'date': createdAt,
-        'address': call['address'] ?? 'Адрес не указан',
-        'phone': call['phone'] ?? 'Телефон не указан', // Сохраняем телефон
-        'status': status,
-        'time': time,
-        'isCompleted': isCompleted,
-        // Пациенты - пока используем только телефон
-        'patients': [
-          {
-            'id': call['id'],
-            'phone': call['phone'],
-            'hasConclusion': false,
-          }
-        ],
-      };
-    }).toList();
-  }
+  return apiData.map((call) {
+    final createdAt = DateTime.parse(call['created_at']);
+    final time = '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+    final status = call['emergency'] == true ? 'ЭКСТРЕННЫЙ' : 'НЕОТЛОЖНЫЙ';
+
+    // Возвращаем только основную информацию о вызове
+    // Пациенты будут загружены позже при открытии деталей
+    return {
+      'id': call['id'],
+      'date': createdAt,
+      'address': call['address'] ?? 'Адрес не указан',
+      'phone': call['phone'] ?? 'Телефон не указан',
+      'status': status,
+      'time': time,
+      'isCompleted': false, // По умолчанию не завершен
+      'patients': [], // Пока пустой список
+    };
+  }).toList();
+}
 
 List<Map<String, dynamic>> _getPatientsFromCall(Map<String, dynamic> call) {
   // Временное решение, пока нет данных о пациентах

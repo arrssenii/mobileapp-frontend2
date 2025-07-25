@@ -6,9 +6,9 @@ class Appointment {
   final int patientId;
   final String patientName;
   final String diagnosis;
-  final String address;
+  final String? address;
   final DateTime time;
-  late final AppointmentStatus status;
+  AppointmentStatus status;
   final DateTime birthDate;
   final bool isMale;
   final String specialization; // Специализация врача

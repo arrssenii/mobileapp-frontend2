@@ -37,16 +37,19 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
   
     try {
       final patientId = widget.patientId.toString();
-      final historyData = await apiClient.getPatientReceptionsHistory(patientId);
+      final response = await apiClient.getPatientReceptionsHistory(patientId);
       
-      final visits = historyData.map((reception) {
+      // Извлекаем список посещений из data.hits
+      final List<dynamic> hits = response['data']['hits'] ?? [];
+      
+      final visits = hits.map((reception) {
         final doctor = reception['doctor'] as Map<String, dynamic>?;
-        final specialization = doctor?['specialization'] as Map<String, dynamic>?;
         
         return {
           'date': _formatDate(reception['date']?.toString() ?? ''),
           'doctor': doctor?['full_name']?.toString() ?? 'Неизвестный специалист',
-          'specialization': specialization?['title']?.toString() ?? 'Специализация не указана',
+          // Специализация теперь хранится как строка
+          'specialization': doctor?['specialization']?.toString() ?? 'Специализация не указана',
           'diagnosis': reception['diagnosis']?.toString() ?? 'Диагноз не указан',
           'recommendations': reception['recommendations']?.toString() ?? 'Рекомендации не указаны',
         };

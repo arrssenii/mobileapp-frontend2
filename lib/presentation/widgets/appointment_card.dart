@@ -24,7 +24,7 @@ class AppointmentCard extends StatelessWidget {
         cardColor = Colors.red.shade100;
         statusIcon = Icons.close;
         iconColor = Colors.red;
-        statusText = 'Не явился';
+        statusText = 'Отменён';
         break;
       case AppointmentStatus.completed:
         cardColor = Colors.green.shade100;
@@ -104,13 +104,6 @@ class AppointmentCard extends StatelessWidget {
                         Text(
                           appointment.diagnosis,
                           style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          appointment.address,
-                          style: const TextStyle(fontSize: 13, color: Colors.grey),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

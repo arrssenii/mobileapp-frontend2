@@ -258,19 +258,32 @@ class ApiClient {
   }
 
   // services/api_client.dart
-  Future<List<dynamic>> getPatientReceptionsHistory(String patientId) async {
+  Future<Map<String, dynamic>> getPatientReceptionsHistory(String patientId) async {
     return _handleApiCall(
       () async {
         final response = await _dio.get('/hospital/receptions/patients/$patientId');
 
-        // Правильно извлекаем данные из вложенной структуры
+        // Проверяем статус ответа
+        if (response.statusCode != 200) {
+          throw ApiError(
+            statusCode: response.statusCode,
+            message: 'Ошибка сервера: ${response.statusCode}',
+            rawError: response.data,
+          );
+        }
+
+        // Проверяем структуру ответа
         if (response.data is! Map<String, dynamic> || 
             response.data['data'] == null ||
             response.data['data']['hits'] == null) {
-          throw ApiError(message: 'Некорректный формат ответа сервера');
+          throw ApiError(
+            message: 'Некорректный формат ответа сервера',
+            rawError: response.data,
+          );
         }
 
-        return response.data['data']['hits'] as List<dynamic>;
+        // Возвращаем ВЕСЬ объект ответа, а не только hits
+        return response.data as Map<String, dynamic>;
       },
       errorMessage: 'Ошибка загрузки истории приёмов пациента',
     );
@@ -348,6 +361,19 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> updateReceptionStatus(
+    int receptionId, {
+    required String status,
+  }) async {
+    return _handleApiCall(
+      () => _dio.put(
+        '/hospital/receptions/$receptionId',
+        data: {'status': status},
+      ).then((response) => response.data as Map<String, dynamic>),
+      errorMessage: 'Ошибка обновления статуса приёма',
+    );
+  }
+
   // Приёмы СМП
   Future<List<dynamic>> getReceptionsSMPByDoctorAndDate(
     String docId, {
@@ -374,6 +400,58 @@ class ApiClient {
     return _handleApiCall(
       () => _dio.get('/smp/$smpId').then((response) => response.data as Map<String, dynamic>),
       errorMessage: 'Ошибка загрузки приёма СМП с услугами',
+    );
+  }
+
+  Future<Map<String, dynamic>> getEmergencyCallDetails(String callId) async {
+  return _handleApiCall(
+    () async {
+      final response = await _dio.get('/emergency/calls/$callId');
+      return response.data as Map<String, dynamic>;
+    },
+    errorMessage: 'Ошибка загрузки деталей вызова',
+  );
+}
+
+// Получение данных для заключения
+Future<Map<String, dynamic>> getEmergencyConsultationData(String callId, String smpId) async {
+  return _handleApiCall(
+    () async {
+      final response = await _dio.get('/emergency/smps/$callId/$smpId');
+      return response.data as Map<String, dynamic>;
+    },
+    errorMessage: 'Ошибка загрузки данных для заключения',
+  );
+}
+
+// Создание заключения
+Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data) async {
+  return _handleApiCall(
+    () async {
+      final response = await _dio.post(
+        '/emergency/receptions',
+        data: data,
+        options: Options(
+          contentType: Headers.jsonContentType,
+        ),
+      );
+      return response.data as Map<String, dynamic>;
+    },
+    errorMessage: 'Ошибка создания заключения',
+  );
+}
+
+  // Обновление статуса вызова
+  Future<Map<String, dynamic>> updateEmergencyCallStatus(String callId, String status) async {
+    return _handleApiCall(
+      () async {
+        final response = await _dio.patch(
+          '/emergency/$callId',
+          data: {'status': status},
+        );
+        return response.data as Map<String, dynamic>;
+      },
+      errorMessage: 'Ошибка обновления статуса вызова',
     );
   }
 

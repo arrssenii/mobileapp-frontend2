@@ -46,51 +46,35 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       );
       return;
     }
-  
+
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
-      
-      // Формируем данные для отправки
-      final specializationData = {
-        'document_type': _documentType,
-        'fields': _fields.map((field) {
-          return {
-            'name': field.name,
-            'value': _formValues[field.name],
-          };
-        }).toList(),
-      };
-  
-      // Подготавливаем медицинские услуги
-      final medServices = _medServices.map((service) {
-        return {
-          'id': service['id'],
-          'name': service['name'],
-          'price': service['price'],
-        };
-      }).toList();
-  
-      // Вычисляем итоговую стоимость
+
+      // Подготавливаем данные для отправки
+      final Map<String, dynamic> specializationUpdates = {};
+      for (var field in _fields) {
+        specializationUpdates[field.name] = _formValues[field.name];
+      }
+
+      // Рассчитываем общую стоимость
       final totalCost = _medServices.fold(0, (sum, service) => sum + (service['price'] as int));
-  
-      // Создаем заключение
-      await apiClient.createEmergencyReception({
-        'doctor_id': widget.doctorId,
-        'patient_id': widget.recordId,
-        'emergency_call_id': widget.emergencyCallId!,
-        'diagnosis': _formValues['diagnosis'] ?? '',
-        'recommendations': _formValues['recommendations'] ?? '',
-        'specialization_data': specializationData,
-        'med_services': medServices,
-        'total_cost': totalCost, // Добавляем итоговую стоимость
-      });
-  
+
+      // Отправляем данные
+      await apiClient.updateEmergencyReception(
+        receptionId: widget.recordId,
+        diagnosis: _formValues['diagnosis'] ?? '',
+        recommendations: _formValues['recommendations'] ?? '',
+        specializationUpdates: specializationUpdates,
+        medServices: _medServices,
+        totalCost: totalCost,
+      );
+
       if (!mounted) return;
       Navigator.pop(context, true);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Заключение успешно создано!'),
+          content: Text('Заключение успешно обновлено!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -122,24 +106,23 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       }
 
       final data = response['data'] as Map<String, dynamic>? ?? {};
-      final specData = data['specialization_data'] as Map<String, dynamic>? ?? {};
-
-      // Извлекаем медицинские услуги
-      final medServices = data['med_services'] as List<dynamic>? ?? [];
-
+    
+    // Получаем медицинские услуги
+      final List<dynamic> medServices = data['med_services'] as List<dynamic>? ?? [];
+      final List<Map<String, dynamic>> medServicesList = medServices.map<Map<String, dynamic>>((service) {
+        return {
+          'id': service['id'] as int,
+          'name': service['name'] as String,
+          'price': service['price'] as int,
+        };
+      }).toList();
+  
       setState(() {
-        _documentType = specData['document_type'] as String?;
+        _documentType = data['specialization'] as String?;
+        final specData = data['specialization_data'] as Map<String, dynamic>? ?? {};
         final fields = specData['fields'] as List<dynamic>? ?? [];
-        _fields = fields.map((f) => DynamicField.fromJson(f)).toList();
-
-        // Сохраняем медицинские услуги
-        _medServices = medServices.map((service) {
-          return {
-            'id': service['id'],
-            'name': service['name'],
-            'price': service['price'],
-          };
-        }).toList();
+        _fields = fields.map((f) => DynamicField.fromJson(f as Map<String, dynamic>)).toList();
+        _medServices = medServicesList;
 
         // Инициализируем значения формы
         for (var field in _fields) {

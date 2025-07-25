@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 import 'auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -409,26 +410,26 @@ class ApiClient {
       final response = await _dio.get('/emergency/calls/$callId');
       return response.data as Map<String, dynamic>;
     },
-    errorMessage: 'Ошибка загрузки деталей вызова',
+    errorMessage: 'Ошибка загрузки деталей вызова СМП',
   );
 }
 
 // Получение данных для заключения
-Future<Map<String, dynamic>> getEmergencyConsultationData(String callId, String smpId) async {
-  return _handleApiCall(
-    () async {
-      final response = await _dio.get('/emergency/smps/$callId/$smpId');
-      return response.data as Map<String, dynamic>;
-    },
-    errorMessage: 'Ошибка загрузки данных для заключения',
-  );
-}
+  Future<Map<String, dynamic>> getEmergencyConsultationData(String callId, String smpId) async {
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get('/emergency/smps/$callId/$smpId');
+        return response.data as Map<String, dynamic>;
+      },
+      errorMessage: 'Ошибка загрузки данных для заключения',
+    );
+  }
 
 // Создание заключения
 Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data) async {
   return _handleApiCall(
     () async {
-      final response = await _dio.post(
+      final response = await _dio.put(
         '/emergency/receptions',
         data: data,
         options: Options(
@@ -440,6 +441,69 @@ Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data)
     errorMessage: 'Ошибка создания заключения',
   );
 }
+
+  Future<Map<String, dynamic>> createEmergencyReceptionPatient({
+    required int emergencyCallId,
+    required String fullName,
+    required DateTime birthDate,
+    required bool isMale,
+  }) async {
+    return _handleApiCall(
+      () async {
+        final data = {
+          "emergency_call_id": emergencyCallId,
+          "patient": {
+            "full_name": fullName,
+            "birth_date": DateFormat('yyyy-MM-dd').format(birthDate),
+            "is_male": isMale,
+          }
+        };
+
+        final response = await _dio.post(
+          '/emergency/receptions',
+          data: data,
+          options: Options(
+            contentType: Headers.jsonContentType,
+          ),
+        );
+
+        // Явное приведение типа
+        return response.data as Map<String, dynamic>;
+      },
+      errorMessage: 'Ошибка создания пациента',
+    );
+  }
+
+  Future<Map<String, dynamic>> updateEmergencyReception({
+    required int receptionId,
+    required String diagnosis,
+    required String recommendations,
+    required Map<String, dynamic> specializationUpdates,
+    required List<Map<String, dynamic>> medServices,
+    required int totalCost,
+  }) async {
+    return _handleApiCall(
+      () async {
+        final data = {
+          "diagnosis": diagnosis,
+          "recommendations": recommendations,
+          "specialization_data_updates": specializationUpdates,
+          "med_services": medServices,
+          "total_cost": totalCost,
+        };
+  
+        final response = await _dio.put(
+          '/emergency/receptions/$receptionId',
+          data: data,
+          options: Options(
+            contentType: Headers.jsonContentType,
+          ),
+        );
+        return response.data as Map<String, dynamic>;
+      },
+      errorMessage: 'Ошибка обновления заключения',
+    );
+  }
 
   // Обновление статуса вызова
   Future<Map<String, dynamic>> updateEmergencyCallStatus(String callId, String status) async {
@@ -456,7 +520,7 @@ Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data)
   }
 
   // Звонки СМП
-  Future<List<dynamic>> getEmergencyCallsByDoctorAndDate(
+  Future<Map<String, dynamic>> getEmergencyCallsByDoctorAndDate(
     String docId, {
     required DateTime date,
     int page = 1,
@@ -471,7 +535,7 @@ Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data)
             'page': page,
           },
         );
-        return response.data['hits'] as List<dynamic>;
+        return response.data as Map<String, dynamic>;
       },
       errorMessage: 'Ошибка загрузки звонков СМП',
     );

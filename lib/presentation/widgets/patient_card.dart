@@ -30,7 +30,7 @@ class PatientCard extends StatelessWidget {
       child: Stack(
         children: [
           CustomCard(
-            backgroundColor: isSelected 
+            backgroundColor: isSelected
                 ? Theme.of(context).primaryColor.withOpacity(0.1)
                 : backgroundColor ?? Colors.white,
             child: Padding(
@@ -43,7 +43,7 @@ class PatientCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          patient['full_name'] ?? 'Неизвестный пациент', // исправлено
+                          _buildFullName(),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -51,31 +51,48 @@ class PatientCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // Убрали иконку критичности (нет данных)
                     ],
                   ),
                   const SizedBox(height: 10),
-                  // Исправленный блок с данными - вертикальное расположение
                   _buildInfoRow(
-                    patient['is_male'] == true 
-                        ? Icons.male 
-                        : Icons.female,
-                    patient['is_male'] ? 'Мужчина' : 'Женщина', // добавлено
+                    patient['is_male'] == true ? Icons.male : Icons.female,
+                    patient['is_male'] == true ? 'Мужчина' : 'Женщина',
                   ),
                   const SizedBox(height: 8),
                   _buildInfoRow(
                     Icons.calendar_today,
-                    _formatBirthDate(patient['birth_date']), // форматирование даты
+                    _formatBirthDate(patient['birth_date']),
                   ),
-                  // Убрали блок с диагнозом (нет данных)
                 ],
               ),
             ),
           ),
-          // Убрали индикатор статуса (нет данных)
+          if (showStatusIndicator)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  String _buildFullName() {
+    final lastName = patient['last_name'] ?? '';
+    final firstName = patient['first_name'] ?? '';
+    final middleName = patient['middle_name'] ?? '';
+
+    final parts = [lastName, firstName, middleName].where((s) => s.isNotEmpty);
+    if (parts.isEmpty) return 'Неизвестный пациент';
+    return parts.join(' ');
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
@@ -98,9 +115,12 @@ class PatientCard extends StatelessWidget {
     if (birthDate == null) return 'Дата рождения неизвестна';
 
     try {
-      final date = DateTime.parse(birthDate);       
-      return '${date.day}.${date.month}.${date.year}';
-    } catch (e) {
+      final date = DateTime.parse(birthDate);
+      final day = date.day.toString().padLeft(2, '0');
+      final month = date.month.toString().padLeft(2, '0');
+      final year = date.year;
+      return '$day.$month.$year';
+    } catch (_) {
       return 'Неверный формат даты';
     }
   }
@@ -108,7 +128,7 @@ class PatientCard extends StatelessWidget {
   void _showOptions(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -116,16 +136,20 @@ class PatientCard extends StatelessWidget {
               icon: Icons.visibility,
               title: 'Подробнее',
               onTap: () {
-                Navigator.pop(context);
-                onDetails();
+                Navigator.pop(dialogContext);
+                if (context.mounted) {
+                  onDetails();
+                }
               },
             ),
             ActionTile(
               icon: Icons.history,
               title: 'История болезни',
               onTap: () {
-                Navigator.pop(context);
-                onHistory();
+                Navigator.pop(dialogContext);
+                if (context.mounted) {
+                  onHistory();
+                }
               },
             ),
           ],

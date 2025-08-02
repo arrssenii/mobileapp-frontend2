@@ -12,7 +12,7 @@ class ApiClient {
   Doctor? _currentDoctor;
   final AuthService _authService;
 
-  final String baseUrl = 'http://192.168.30.106:8080/api/v1';
+  final String baseUrl = 'http://192.168.30.153:8080/api/v1';
 
   ApiClient(this._authService) {
     _dio = Dio(
@@ -77,6 +77,16 @@ class ApiClient {
   Future<String?> getToken() async {
     return await _authService.getToken();
   }
+
+  Future<String> getAppVersion() async {
+    try {
+      final response = await _dio.get('/version');
+      return response.data['version'] ?? 'N/A';
+    } catch (e) {
+      debugPrint('Ошибка получения версии: $e');
+      return 'N/A';
+    }
+}
 
   Future<void> _loadToken() async {
     _authToken = await _authService.getToken();
@@ -367,7 +377,7 @@ class ApiClient {
     required String status,
   }) async {
     return _handleApiCall(
-      () => _dio.put(
+      () => _dio.patch(
         '/hospital/receptions/$receptionId',
         data: {'status': status},
       ).then((response) => response.data as Map<String, dynamic>),
@@ -444,7 +454,9 @@ Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data)
 
   Future<Map<String, dynamic>> createEmergencyReceptionPatient({
     required int emergencyCallId,
-    required String fullName,
+    required String firstName,
+    required String lastName,
+    required String middleName,
     required DateTime birthDate,
     required bool isMale,
   }) async {
@@ -453,7 +465,9 @@ Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data)
         final data = {
           "emergency_call_id": emergencyCallId,
           "patient": {
-            "full_name": fullName,
+            "first_name" : firstName,
+            "last_name": lastName,
+            "middle_name": middleName,
             "birth_date": DateFormat('yyyy-MM-dd').format(birthDate),
             "is_male": isMale,
           }

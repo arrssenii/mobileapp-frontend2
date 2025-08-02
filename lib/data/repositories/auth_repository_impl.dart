@@ -8,8 +8,8 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<User> login(String username, String password) async {
-    final userModel = await remoteDataSource.login(username, password);
+  Future<User> login(String phone, String password) async {
+    final userModel = await remoteDataSource.login(phone, password);
     return userModel; // UserModel наследуется от User, поэтому преобразование не нужно
   }
 }

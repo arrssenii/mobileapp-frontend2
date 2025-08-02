@@ -34,7 +34,9 @@ class _AddPatientDialog extends StatefulWidget {
 
 class __AddPatientDialogState extends State<_AddPatientDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
   DateTime? _birthDate;
   bool? _isMale;
   bool _isSaving = false;
@@ -54,7 +56,9 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
       final response = await apiClient.createEmergencyReceptionPatient(
         emergencyCallId: widget.emergencyCallId,
-        fullName: _nameController.text,
+        firstName: _firstNameController.text,
+        middleName: _middleNameController.text,
+        lastName: _lastNameController.text,
         birthDate: _birthDate!,
         isMale: _isMale!,
       );
@@ -62,19 +66,27 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
       final patientId = response['data']['patient_id'] as int?;
       final receptionId = response['data']['id'] as int?;
 
+      print("recepID от респона ${receptionId}");
+
       if (patientId == null || receptionId == null) {
         throw Exception('Не удалось получить ID созданного пациента или заключения');
       }
+      // final fullName = '${_firstNameController.text ?? ''} ${ _lastNameController.text ?? ''} ${_middleNameController.text ?? ''}'.trim();
 
+      
       final newPatient = {
         'id': receptionId,        // ID заключения (reception)
         'patientId': patientId,   // ID пациента
-        'name': _nameController.text,
+        'firstName': _firstNameController.text,
+        'lastName': _lastNameController.text,
+        'middleName': _middleNameController.text,
         'birthDate': _birthDate,
         'isMale': _isMale,
         'hasConclusion': false,
         'phone': widget.patientPhone,
       };
+
+      
 
       widget.onPatientCreated(newPatient);
       Navigator.pop(context);
@@ -83,7 +95,7 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
         SnackBar(content: Text('Ошибка: ${e.toString()}')),
       );
     } finally {
-      setState(() => _isSaving = false);
+      setState(() => _isSaving = false);  
     }
   }
 
@@ -95,22 +107,37 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
         child: Form(
           key: _formKey,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                controller: _nameController,
+                controller: _lastNameController,
                 decoration: const InputDecoration(
-                  labelText: 'ФИО',
+                  labelText: 'Фамилия',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Введите ФИО пациента';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Введите фамилию' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _firstNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Имя',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Введите имя' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _middleNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Отчество',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Введите Отчество' : null,
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   const Text('Дата рождения:'),
@@ -124,22 +151,28 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text('Пол:'),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  Radio<bool>(
-                    value: true,
-                    groupValue: _isMale,
-                    onChanged: (value) => setState(() => _isMale = value),
+                  const Text('Пол:'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButton<bool>(
+                      value: _isMale,
+                      isExpanded: true,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _isMale = value;
+                          });
+                        }
+                      },
+                      items: const [
+                        DropdownMenuItem(value: true, child: Text('Мужской')),
+                        DropdownMenuItem(value: false, child: Text('Женский')),
+                      ],
+                    ),
                   ),
-                  const Text('Мужской'),
-                  Radio<bool>(
-                    value: false,
-                    groupValue: _isMale,
-                    onChanged: (value) => setState(() => _isMale = value),
-                  ),
-                  const Text('Женский'),
                 ],
               ),
             ],
@@ -148,14 +181,12 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isSaving ? null : () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context),
           child: const Text('Отмена'),
         ),
         ElevatedButton(
-          onPressed: _isSaving ? null : _savePatient,
-          child: _isSaving 
-              ? const CircularProgressIndicator()
-              : const Text('Сохранить'),
+          onPressed: _savePatient,
+          child: const Text('Сохранить'),
         ),
       ],
     );
@@ -202,15 +233,23 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   
 
   List<Map<String, dynamic>> _transformPatientsData(List<dynamic> patientsData) {
-    return patientsData.map((patient) {
-      return {
-        'id': patient['id'],
-        'patientId': patient['patient']['id'],
-        'name': patient['patient']['full_name'] ?? 'Пациент ${patient['id']}',
-        'hasConclusion': false,
-        'diagnosis': patient['diagnosis'] ?? '',
-        'recommendations': patient['recommendations'] ?? '',
-      };
+      return patientsData.map<Map<String, dynamic>>((item) {
+        final data = item['patient'] ?? item;
+        final hasConclusion = (item['diagnosis'] != null && 
+                         (item['diagnosis'] as String).isNotEmpty) ||
+                        (item['recommendations'] != null && 
+                         (item['recommendations'] as String).isNotEmpty);
+        return {
+          'firstName': data['first_name'] ?? data['firstName'] ?? '',
+          'lastName': data['last_name'] ?? data['lastName'] ?? '',
+          'middleName': data['middle_name'] ?? data['middleName'] ?? '',
+          'birth_date': data['birth_date'],
+          'is_male': data['is_male'],
+          'patientId': data['id'], // ID пациента
+          'receptionId': item['id'], // ID приёма (smpId) <-- ДОБАВЬТЕ ЭТО!
+          'hasConclusion': hasConclusion,
+          // добавь другие нужные поля
+        };
     }).toList();
   }
 
@@ -329,7 +368,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           size: 32,
         ),
         title: Text(
-          patient['name'] ?? 'Новый пациент',
+          (patient['lastName'] ?? '') + ' ' + (patient['firstName'] ?? '') + ' ' + (patient['middleName'] ?? '').trim().replaceAll(RegExp(r'\s+'), ' ').trim(),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
@@ -362,21 +401,24 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   }
 
   void _startConsultation(Map<String, dynamic> patient) {
+    final fullName = '${patient['lastName'] ?? ''} ${patient['firstName'] ?? ''} ${patient['middleName'] ?? ''}'.trim();
+    print('Открываем ConsultationScreen с patientId=${patient['id']}, emergencyCallId=${widget.call['id']}');
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ConsultationScreen(
-          patientName: patient['name'],
+          patientName: fullName,
           appointmentType: 'emergency',
-          recordId: patient['patientId'], // Используем patientId как smpId
+          recordId: patient['receptionId'], 
           doctorId: Provider.of<ApiClient>(context, listen: false).currentDoctorId ?? 1,
           emergencyCallId: widget.call['id'], // callId
         ),
       ),
     ).then((result) {
       if (result == true) {
+        // _loadCallDetails();
         setState(() {
-          patient['hasConclusion'] = true;
+        patient['hasConclusion'] = true;
         });
         _updateCallStatusIfCompleted();
       }
@@ -406,17 +448,22 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       builder: (context) => _AddPatientDialog(
         emergencyCallId: widget.call['id'],
         patientPhone: widget.call['phone'] ?? 'Телефон не указан', // Передаем телефон напрямую
+        
         onPatientCreated: (newPatient) {
-          setState(() {
-            widget.call['patients'].add(newPatient);
-          });
-          _updateCallStatusIfCompleted();
+          _loadCallDetails();
+          // print('Карточка пациента: $newPatient');
+
+          // setState(() {
+          //   widget.call['patients'].add(newPatient);
+          // });
+          // _updateCallStatusIfCompleted();
         },
       ),
     );
   }
 
   void _updateCallStatusIfCompleted() async {
+    // await _loadCallDetails();
     final allCompleted = widget.call['patients']
         .every((patient) => patient['hasConclusion'] == true);
         
@@ -450,10 +497,11 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   }
 
   void _showPatientOptions(Map<String, dynamic> patient) {
+    final fullName = '${patient['lastName'] ?? ''} ${patient['firstName'] ?? ''} ${patient['middleName'] ?? ''}'.trim();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(patient['name']),
+        title: Text(fullName),
         content: const Text('Выберите действие'),
         actions: [
           // УДАЛЕНА КНОПКА "Карта пациента"
@@ -479,7 +527,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   void _openPatientDetails(Map<String, dynamic> patient) {
     final patientData = {
       'id': patient['id'],
-      'fullName': patient['name'],
+      'fullName': ((patient['lastName'] ?? '') + ' ' + (patient['firstName'] ?? '') + ' ' + (patient['middleName'] ?? '')).trim(),
       'address': widget.call['address'],
       'phone': '+7 (XXX) XXX-XX-XX',
       'diagnosis': 'Экстренный вызов',

@@ -14,13 +14,19 @@ class AddPatientScreen extends StatefulWidget {
 
 class _AddPatientScreenState extends State<AddPatientScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _fullNameController = TextEditingController();
+
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _middleNameController = TextEditingController();
+
   String? _gender;
   DateTime? _birthDate;
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _lastNameController.dispose();
+    _firstNameController.dispose();
+    _middleNameController.dispose();
     super.dispose();
   }
 
@@ -42,26 +48,35 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              // ФИО (обязательное)
+              // Фамилия
               CustomFormField(
-                label: 'ФИО*',
-                controller: _fullNameController,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Введите ФИО пациента';
-                  }
-                  return null;
-                },
+                label: 'Фамилия*',
+                controller: _lastNameController,
+                validator: (value) => (value == null || value.isEmpty) ? 'Введите фамилию' : null,
               ),
-              
               const SizedBox(height: 20),
-              
-              // Пол (обязательный)
+
+              // Имя
+              CustomFormField(
+                label: 'Имя*',
+                controller: _firstNameController,
+                validator: (value) => (value == null || value.isEmpty) ? 'Введите имя' : null,
+              ),
+              const SizedBox(height: 20),
+
+              // Отчество
+              CustomFormField(
+                label: 'Отчество*',
+                controller: _middleNameController,
+                validator: (value) => (value == null || value.isEmpty) ? 'Введите отчество' : null,
+              ),
+              const SizedBox(height: 20),
+
+              // Пол
               _buildGenderDropdown(),
-              
               const SizedBox(height: 20),
-              
-              // Дата рождения (обязательная)
+
+              // Дата рождения
               Row(
                 children: [
                   const Text(
@@ -76,17 +91,17 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      _birthDate != null 
-                        ? DateFormat('dd.MM.yyyy').format(_birthDate!)
-                        : 'Не выбрана',
+                      _birthDate != null
+                          ? DateFormat('dd.MM.yyyy').format(_birthDate!)
+                          : 'Не выбрана',
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Кнопки
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -115,7 +130,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       ),
     );
   }
-  
+
   Widget _buildGenderDropdown() {
     return DropdownButtonFormField<String>(
       value: _gender,
@@ -145,14 +160,15 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         );
         return;
       }
-      
-      // Возвращаем только необходимые данные
+
       final patientData = {
-        'fullName': _fullNameController.text,
+        'lastName': _lastNameController.text,
+        'firstName': _firstNameController.text,
+        'middleName': _middleNameController.text,
         'birthDate': DateFormat('yyyy-MM-dd').format(_birthDate!),
         'gender': _gender!,
       };
-      
+
       Navigator.pop(context, patientData);
     }
   }

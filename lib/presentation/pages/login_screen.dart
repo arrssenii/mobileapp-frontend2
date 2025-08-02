@@ -8,6 +8,34 @@ import 'main_screen.dart';
 import '../bloc/login_bloc.dart';
 import '../../services/api_client.dart'; // Добавляем импорт ApiClient
 
+class AppVersionWidget extends StatelessWidget {
+  const AppVersionWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final ApiClient apiClient = Provider.of<ApiClient>(context, listen: false);
+    final Future<String> versionFuture = apiClient.getAppVersion();
+
+    return FutureBuilder<String>(
+      future: versionFuture,
+      builder: (context, snapshot) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Text(
+            snapshot.hasData ? 'Версия: ${snapshot.data}' : '',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        );
+      },
+    );
+  }
+}
+
+
 class LoginScreen extends StatelessWidget {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -53,9 +81,9 @@ class LoginScreen extends StatelessWidget {
                     TextField(
                       controller: _usernameController,
                       decoration: const InputDecoration(
-                        labelText: 'Логин',
+                        labelText: 'Телефон',
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
+                        prefixIcon: Icon(Icons.phone),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -75,10 +103,19 @@ class LoginScreen extends StatelessWidget {
                       onPressed: state is LoginLoading
                           ? null
                           : () {
+                              final phone = _usernameController.text;
+                              // Валидация формата телефона
+                              if (!_isValidPhone(phone)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Введите корректный номер телефона (+7XXXXXXXXXX)')),
+                                );
+                                return;
+                              }
+                              
                               context.read<LoginBloc>().add(LoginRequested(
-                                    _usernameController.text,
-                                    _passwordController.text,
-                                  ));
+                                phone,
+                                _passwordController.text,
+                              ));
                             },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -87,6 +124,8 @@ class LoginScreen extends StatelessWidget {
                           ? const CircularProgressIndicator()
                           : const Text('Вход', style: TextStyle(fontSize: 18)),
                     ),
+                    const SizedBox(height: 30), 
+                    const AppVersionWidget(),
                   ],
                 ),
               ),
@@ -97,6 +136,12 @@ class LoginScreen extends StatelessWidget {
     );
   }
   
+bool _isValidPhone(String phone) {
+  // Простая проверка: начинается с +7 и 10 цифр
+  final regex = RegExp(r'^\+7\d{10}$');
+  return regex.hasMatch(phone);
+}
+
   // Загрузка данных доктора после успешной аутентификации
   Future<void> _loadDoctorData(BuildContext context, int userId) async {
   try {

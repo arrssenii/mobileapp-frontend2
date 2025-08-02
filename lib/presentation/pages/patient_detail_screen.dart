@@ -41,8 +41,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   Future<Patient> _loadPatient() async {
     final apiClient = Provider.of<ApiClient>(context, listen: false);
     final patient = await apiClient.getMedCardByPatientId(widget.patientId);
-    // Инициализируем дату рождения
-    _birthDate = patient.birthDate; 
+    _birthDate = patient.birthDate;
+    
+    _resetControllers();
+    _initControllers(patient);
+    
     return patient;
   }
 
@@ -54,7 +57,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       final updatedData = {
         "patient": {
           "id": _currentPatient!.id,
-          "full_name": _controllers['fullName']!.text,
+          "last_name": _controllers['lastName']!.text,
+          "first_name": _controllers['firstName']!.text,
+          "middle_name": _controllers['middleName']!.text,
           "birth_date": DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(
             DateTime.utc(
               _birthDate.year,
@@ -127,7 +132,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   void _initControllers(Patient patient) {
-    _controllers['fullName'] = TextEditingController(text: patient.fullName);
+    _controllers['lastName'] = TextEditingController(text: patient.lastName);
+    _controllers['firstName'] = TextEditingController(text: patient.firstName);
+    _controllers['middleName'] = TextEditingController(text: patient.middleName);
     _isMale = patient.isMale;
     _controllers['phone'] = TextEditingController(text: patient.phone);
     _controllers['email'] = TextEditingController(text: patient.email);
@@ -141,6 +148,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
+
+void _resetControllers() {
+  _controllers.forEach((key, controller) => controller.dispose());
+  _controllers.clear();
+}
   Widget _buildGenderField() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -220,10 +232,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           }
           
           final patient = snapshot.data!;
-          if (!_controllers.containsKey('fullName')) {
-            _initControllers(patient);
-          }
-          
+
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -231,37 +240,55 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               child: ListView(
                 children: [
                   SectionHeader(title: 'Основная информация'),
-                  
-                  _buildField(
-                    label: 'ФИО',
-                    valueKey: 'fullName',
-                    displayValue: patient.fullName,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Введите ФИО пациента';
-                      }
-                      return null;
-                    },
-                    isRequired: true,
-                  ),
+
+                  _isEditing
+                    ? Column(
+                        children: [
+                          _buildField(
+                            label: 'Фамилия',
+                            valueKey: 'lastName',
+                            displayValue: patient.lastName,
+                            validator: (value) =>
+                                value == null || value.isEmpty ? 'Введите фамилию' : null,
+                            isRequired: true,
+                          ),
+                          _buildField(
+                            label: 'Имя',
+                            valueKey: 'firstName',
+                            displayValue: patient.firstName,
+                            validator: (value) =>
+                                value == null || value.isEmpty ? 'Введите имя' : null,
+                            isRequired: true,
+                          ),
+                          _buildField(
+                            label: 'Отчество',
+                            valueKey: 'middleName',
+                            displayValue: patient.middleName,
+                            validator: (value) => null,
+                          ),
+                        ],
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: ListTile(
+                          title: const Text('ФИО', style: TextStyle(fontWeight: FontWeight.w500)),
+                          subtitle: Text(
+                            '${patient.lastName} ${patient.firstName} ${patient.middleName}'.trim(),
+                          ),
+                        ),
+                      ),
 
                   _buildGenderField(),
-                  
-                  ListTile(
-                    title: const Text('Пол', 
-                      style: TextStyle(fontWeight: FontWeight.w500)),
-                    subtitle: Text(patient.gender),
-                  ),
-                  
+
                   _buildBirthDateField(patient),
-                  
+
                   SectionHeader(title: 'Документы'),
-                  
+
                   _buildField(
                     label: 'СНИЛС',
                     valueKey: 'snils',
                     displayValue: _formatSnils(patient.snils),
-                    maxLength: 14, // XXX-XXX-XXX YY
+                    maxLength: 14,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Введите номер СНИЛСа';
@@ -274,13 +301,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       _SnilsFormatter(),
                     ],
                   ),
-                  
-                  // ОМС с маской
+
                   _buildField(
                     label: 'Полис ОМС',
                     valueKey: 'oms',
                     displayValue: _formatOms(patient.oms),
-                    maxLength: 19, // XXXX XXXX XXXX XXXX
+                    maxLength: 19,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Введите номер полиса ОМС';
@@ -293,12 +319,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       _OmsFormatter(),
                     ],
                   ),
-                  
-                  // Паспорт разделен на два поля
+
                   _buildPassportFields(patient),
-                  
+
                   SectionHeader(title: 'Контактная информация'),
-                  
+
                   _buildField(
                     label: 'Телефон',
                     valueKey: 'phone',
@@ -311,7 +336,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       return null;
                     },
                   ),
-                  
+
                   _buildField(
                     label: 'Email',
                     valueKey: 'email',
@@ -324,7 +349,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       return null;
                     },
                   ),
-                  
+
                   _buildField(
                     label: 'Адрес',
                     valueKey: 'address',
@@ -337,9 +362,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       return null;
                     },
                   ),
-                  
+
                   SectionHeader(title: 'Медицинская информация'),
-                  
+
                   _buildField(
                     label: 'Аллергии и противопоказания',
                     valueKey: 'contraindications',

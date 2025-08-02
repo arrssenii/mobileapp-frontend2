@@ -37,7 +37,8 @@ class _PatientListScreenState extends State<PatientListScreen> {
     if (query.isEmpty) return _patients;
     
     return _patients.where((patient) {
-      return patient['full_name'].toLowerCase().contains(query);
+      final fullName = _buildFullName(patient).toLowerCase();
+      return fullName.contains(query);
     }).toList();
   }
 
@@ -59,7 +60,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
         _patients = patientsData.map((patient) {
           return {
             'id': patient['id'] ?? patient['ID'] ?? 0, // Универсальное получение ID
-            'full_name': patient['full_name'] ?? 'Без имени',
+            'first_name': patient['first_name'] ?? '',
+            'last_name': patient['last_name'] ?? '',
+            'middle_name': patient['middle_name'] ?? '',
             'is_male': patient['is_male'] ?? false,
             'birth_date': patient['birth_date'] ?? '',
           };
@@ -103,7 +106,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
     try {
       // Формируем данные в соответствии с требуемой структурой
       final patientPayload = {
-        'full_name': patientData['fullName'],
+        'first_name': patientData['firstName'],
+        'last_name': patientData['lastName'],
+        'middle_name': patientData['middleName'],
         'birth_date': patientData['birthDate'],
         'is_male': patientData['gender'] == 'Мужской',
       };
@@ -142,11 +147,18 @@ class _PatientListScreenState extends State<PatientListScreen> {
       MaterialPageRoute(
         builder: (context) => PatientHistoryScreen(
           patientId: patient['id'],
-          patientName: patient['full_name'], // Исправлено на snake_case
+          patientName: _buildFullName(patient), // Исправлено на snake_case
         ),
       ),
     );
   }
+
+String _buildFullName(Map<String, dynamic> patient) {
+  final lastName = patient['last_name'] ?? '';
+  final firstName = patient['first_name'] ?? '';
+  final middleName = patient['middle_name'] ?? '';
+  return '$lastName $firstName $middleName'.trim();
+}
 
   void _openAddPatientScreen() {
     Navigator.push(
@@ -189,11 +201,11 @@ class _PatientListScreenState extends State<PatientListScreen> {
             onPressed: _refreshPatients,
             tooltip: 'Обновить список',
           ),
-          IconButton(
-            icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)), // Серый цвет
-            onPressed: _openAddPatientScreen,
-            tooltip: 'Добавить пациента',
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)), // Серый цвет
+          //   onPressed: _openAddPatientScreen,
+          //   tooltip: 'Добавить пациента',
+          // ),
         ],
       ),
       body: _isLoading

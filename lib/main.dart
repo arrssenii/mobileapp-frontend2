@@ -204,10 +204,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl({required this.apiClient});
 
   @override
-  Future<UserModel> login(String username, String password) async {
+  Future<UserModel> login(String phone, String password) async {
     try {
       final response = await apiClient.loginDoctor({
-        'username': username,
+        'phone': phone,
         'password': password,
       });
       

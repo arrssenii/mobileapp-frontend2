@@ -97,6 +97,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         response = await apiClient.getEmergencyConsultationData(
           widget.emergencyCallId.toString(),
           widget.recordId.toString(),
+          // widget.emergencyCallId.toString(),
         );
       } else {
         response = await apiClient.getReceptionDetails(
@@ -124,7 +125,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         _fields = fields.map((f) => DynamicField.fromJson(f as Map<String, dynamic>)).toList();
         _medServices = medServicesList;
 
-        // Инициализируем значения формы
+        // Инициализируем значения формыё
         for (var field in _fields) {
           _formValues[field.name] = field.value ?? field.defaultValue ?? _getDefaultForType(field.type);
         }
@@ -699,6 +700,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         await apiClient.updateReceptionHospital(
           widget.recordId.toString(),
           {
+            'diagnosis': _formValues['diagnosis'] ?? '',
+            'recommendations': _formValues['recommendations'] ?? '',
             'status': 'completed',
             'specialization_data': specializationData,
           },

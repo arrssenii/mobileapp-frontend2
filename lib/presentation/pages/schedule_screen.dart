@@ -81,11 +81,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           final patient = hit['patient'] as Map<String, dynamic>? ?? {};
           final doctor = hit['doctor'] as Map<String, dynamic>? ?? {};
           final birthDate = _parseBirthDate(patient['birth_date']);
-      
+          final patientFullName = _buildFullName(patient);
           return Appointment(
             id: hit['id'] ?? 0,
             patientId: patient['id'] ?? 0,
-            patientName: patient['full_name'] ?? 'Неизвестный пациент',
+            patientName: patientFullName,
             diagnosis: hit['diagnosis'] ?? 'Диагноз не указан',
             address: _getAddressFromPatient(patient),
             time: _parseDateTime(hit['date']),
@@ -110,6 +110,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       });
     }
   }
+
+
+  String _buildFullName(Map<String, dynamic> person) {
+  final lastName = person['last_name'] ?? '';
+  final firstName = person['first_name'] ?? '';
+  final middleName = person['middle_name'] ?? '';
+
+  // Собираем и убираем лишние пробелы
+  return [lastName, firstName, middleName]
+      .where((part) => part.isNotEmpty)
+      .join(' ');
+}
 
   Future<void> _markAsNoShow(Appointment appointment) async {
     final originalStatus = appointment.status;

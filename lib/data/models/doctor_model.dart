@@ -2,14 +2,14 @@ class Doctor {
   final int id;
   final String createdAt;
   final String updatedAt;
-  final String login;
+  final String phone;
   final Specialization specialization;
 
   Doctor({
     required this.id,
     required this.createdAt,
     required this.updatedAt,
-    required this.login,
+    required this.phone,
     required this.specialization,
   });
 
@@ -18,12 +18,12 @@ class Doctor {
       id: json['id'] as int,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
-      login: json['login'] as String,
+      phone: json['phone'] as String,
       specialization: Specialization.fromJson(json['specialization']),
     );
   }
 
-  String get fullTitle => "Доктор $login (${specialization.title})";
+  String get fullTitle => "Доктор $phone (${specialization.title})";
 }
 
 class Specialization {

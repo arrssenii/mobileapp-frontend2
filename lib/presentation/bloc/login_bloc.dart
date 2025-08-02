@@ -20,9 +20,13 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   LoginRequested event,
   Emitter<LoginState> emit,
 ) async {
+  if (!_isValidPhone(event.phone)) {
+    emit(LoginError(message: 'Неверный формат телефона'));
+    return;
+  }
   emit(LoginLoading());
   try {
-    final user = await loginUseCase(event.username, event.password);
+    final user = await loginUseCase(event.phone, event.password);
     emit(LoginSuccess(user: user, userId: user.userId));
   } on ApiError catch (e) {
     emit(LoginError(message: e.message));
@@ -32,4 +36,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     emit(LoginError(message: 'Неизвестная ошибка: ${e.toString()}'));
   }
 }
+}
+
+bool _isValidPhone(String phone) {
+  return RegExp(r'^\+7\d{10}$').hasMatch(phone);
 }

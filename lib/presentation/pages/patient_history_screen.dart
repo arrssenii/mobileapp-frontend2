@@ -1,4 +1,5 @@
 // pages/patient_history_screen.dart
+import 'package:demo_app/presentation/pages/consultation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:demo_app/services/api_client.dart';
@@ -43,13 +44,13 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
       final List<dynamic> hits = response['data']['hits'] ?? [];
       
       final visits = hits.map((reception) {
-        final doctor = reception['doctor'] as Map<String, dynamic>?;
+      final doctor = reception['doctor'] as Map<String, dynamic>?;
         
         return {
+          'reception_id': reception['id'] as int?,        // id приёма
+          'doctor': doctor, 
           'date': _formatDate(reception['date']?.toString() ?? ''),
-          'doctor': doctor?['full_name']?.toString() ?? 'Неизвестный специалист',
           // Специализация теперь хранится как строка
-          'specialization': doctor?['specialization']?.toString() ?? 'Специализация не указана',
           'diagnosis': reception['diagnosis']?.toString() ?? 'Диагноз не указан',
           'recommendations': reception['recommendations']?.toString() ?? 'Рекомендации не указаны',
         };
@@ -110,13 +111,54 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                       padding: const EdgeInsets.all(16),
                       itemCount: _visits.length,
                       itemBuilder: (context, index) {
-                        return _buildVisitCard(_visits[index]);
+                        final visit = _visits[index];
+                        return InkWell(
+                          onTap: () {;
+                            final doctor = visit['doctor'];
+                            if (doctor is Map<String, dynamic>) {
+                              final doctorId = doctor['doctor_id'];
+                              print('Doctor ID: $doctorId');
+                            } else {
+                              print('doctor is not a Map: $doctor');
+                            }
+                            final doctorId = doctor != null ? doctor['doctor_id'] as int? : null;
+                            final int? receptionId = visit['reception_id'];
+                            print('Recep ID: $receptionId');
+                            if (doctorId == null || receptionId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Ошибка: отсутствуют необходимые данные для загрузки заключения')),
+                              );
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ConsultationScreen(
+                                  patientName: widget.patientName,
+                                  appointmentType: 'reception', // или динамически, если есть
+                                  recordId: receptionId,
+                                  doctorId: doctorId,
+                                  // recordId: visit['id'] as int,
+                                  // doctorId: visit['doctor_id'] as int? ?? 0,
+                                  isReadOnly: true, // Открываем только для просмотра
+                                ),
+                              ),
+                            );
+                          },
+                          child: _buildVisitCard(visit),
+                        );
                       },
                     ),
     );
   }
 
   Widget _buildVisitCard(Map<String, dynamic> visit) {
+    final doctor = visit['doctor'] ?? {};
+    final String doctorName = doctor['full_name'] ?? 'Неизвестно';
+    final String specialization = doctor['specialization'] ?? 'Не указано';
+    final String diagnosis = visit['diagnosis'] ?? '';
+    final String recommendations = visit['recommendations'] ?? '';
+    final String date = visit['date'] ?? '';
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -127,7 +169,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
           children: [
             // Дата
             Text(
-              visit['date'],
+              date,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -147,11 +189,11 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        visit['doctor'],
+                        doctorName,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        visit['specialization'],
+                        specialization,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -179,7 +221,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                         'Диагноз:',
                         style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                      Text(visit['diagnosis']),
+                      Text(diagnosis),
                     ],
                   ),
                 ),
@@ -201,7 +243,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                         'Рекомендации:',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      Text(visit['recommendations']),
+                      Text(recommendations),
                     ],
                   ),
                 ),

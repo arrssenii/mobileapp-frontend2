@@ -227,6 +227,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   void _showAppointmentOptions(dynamic appointmentData) {
     final appointment = appointmentData as Appointment;
+    final isCompletedOrNoShow = appointment.status == AppointmentStatus.completed ||
+                              appointment.status == AppointmentStatus.noShow;
     showDialog(
       context: context,
       builder: (context) {
@@ -253,22 +255,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       _openPatientDetails(context, appointment);
                     },
                   ),
-                  ActionTile(
-                    icon: Icons.medical_services,
-                    title: 'Начать приём',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openConsultationScreen(context, appointment);
-                    },
-                  ),
-                  ActionTile(
-                    icon: Icons.close,
-                    title: 'Отменён',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _markAsNoShow(appointment);
-                    },
-                  ),
+                  if (!isCompletedOrNoShow) ...[
+                    ActionTile(
+                      icon: Icons.medical_services,
+                      title: 'Начать приём',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openConsultationScreen(context, appointment);
+                      },
+                    ),
+                    ActionTile(
+                      icon: Icons.close,
+                      title: 'Отменён',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _markAsNoShow(appointment);
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   TextButton(
                     child: const Text('Отмена', 
@@ -288,8 +292,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  void _openPatientDetails(BuildContext context, Appointment appointment) {
-    Navigator.push(
+  void _openPatientDetails(BuildContext context, Appointment appointment) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PatientDetailScreen(
@@ -297,6 +301,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
       ),
     );
+
+    // Обновляем список после возвращения
+    _loadAppointments();
   }
 
   void _openConsultationScreen(BuildContext context, Appointment appointment) {

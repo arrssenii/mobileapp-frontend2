@@ -73,7 +73,6 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
       }
       // final fullName = '${_firstNameController.text ?? ''} ${ _lastNameController.text ?? ''} ${_middleNameController.text ?? ''}'.trim();
 
-      
       final newPatient = {
         'id': receptionId,        // ID заключения (reception)
         'patientId': patientId,   // ID пациента
@@ -85,8 +84,6 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
         'hasConclusion': false,
         'phone': widget.patientPhone,
       };
-
-      
 
       widget.onPatientCreated(newPatient);
       Navigator.pop(context);
@@ -394,6 +391,10 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
             : ElevatedButton(
                 child: const Text('Заключение'),
                 onPressed: () => _startConsultation(patient),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  minimumSize: const Size(110, 36), // Минимальные размеры (ширина, высота)
+                ),
               ),
         onTap: () => _showPatientOptions(patient),
       ),

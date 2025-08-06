@@ -10,6 +10,7 @@ class ConsultationScreen extends StatefulWidget {
   final int recordId;
   final int doctorId;
   final int? emergencyCallId; // Добавляем новый параметр
+  final bool isReadOnly;
 
   const ConsultationScreen({
     super.key,
@@ -18,6 +19,7 @@ class ConsultationScreen extends StatefulWidget {
     required this.recordId,
     required this.doctorId,
     this.emergencyCallId, // Делаем необязательным
+    this.isReadOnly = false,
   });
 
   @override
@@ -119,7 +121,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       }).toList();
   
       setState(() {
-        _documentType = data['specialization'] as String?;
+        final doctor = data['doctor'] as Map<String, dynamic>? ?? {};
+        _documentType = doctor['specialization'] as String? ?? data['specialization'] as String?;
         final specData = data['specialization_data'] as Map<String, dynamic>? ?? {};
         final fields = specData['fields'] as List<dynamic>? ?? [];
         _fields = fields.map((f) => DynamicField.fromJson(f as Map<String, dynamic>)).toList();
@@ -283,18 +286,19 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
 
             // Кнопка сохранения
             const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _completeConsultation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            if (!widget.isReadOnly)
+              ElevatedButton(
+                onPressed: _completeConsultation,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text(
+                  'Завершить консультацию',
+                  style: TextStyle(fontSize: 18),
+                ),
               ),
-              child: const Text(
-                'Завершить консультацию',
-                style: TextStyle(fontSize: 18),
-              ),
-            ),
           ],
         ),
       ),
@@ -302,6 +306,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   Widget _buildField(DynamicField field) {
+    // print('isReadOnly: ${widget.isReadOnly}');
+    // print('Field.Name: ${field.name} Field.Type ${field.type}');
     switch (field.type) {
       case 'string':
         return _buildTextField(field);
@@ -319,48 +325,90 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   Widget _buildBooleanField(DynamicField field) {
+    final currentValue = _formValues[field.name] as bool? ?? false;
+
+    if (widget.isReadOnly) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: Row(
+          children: [
+            Icon(
+              currentValue ? Icons.check_circle : Icons.cancel,
+              color: currentValue ? Colors.green : Colors.grey,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${field.description}: ${currentValue ? 'Да' : 'Нет'}',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
         children: [
+          Text(field.description, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const Spacer(),
           Switch(
-            value: _formValues[field.name] as bool? ?? false,
+            value: currentValue,
             onChanged: (value) {
               setState(() {
                 _formValues[field.name] = value;
               });
             },
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              field.description,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
         ],
       ),
     );
   }
 
+
   Widget _buildTextField(DynamicField field) {
-    final controller = TextEditingController(
-      text: _formValues[field.name]?.toString() ?? '',
-    );
-  
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            field.description,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          StatefulBuilder(
-            builder: (context, setStateField) {
-              return TextFormField(
+    final value = _formValues[field.name]?.toString() ?? '';
+    // Режим только для чтения - всегда используем текстовое представление
+    if (widget.isReadOnly) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              field.description,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              child: SelectableText(
+                value.isNotEmpty ? value : '—',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Режим редактирования - используем StatefulBuilder для управления состоянием
+    return StatefulBuilder(
+      builder: (context, setStateField) {
+        final controller = TextEditingController(text: value);
+        
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                field.description,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
                 controller: controller,
                 maxLines: field.format == 'longtext' ? 5 : 1,
                 maxLength: field.maxLength,
@@ -384,7 +432,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                 ),
                 onChanged: (value) {
                   _formValues[field.name] = value;
-                  setStateField(() {});
                 },
                 validator: (value) {
                   if (field.required && (value == null || value.isEmpty)) {
@@ -395,97 +442,106 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                   }
                   return null;
                 },
-              );
-            },
-          ),
-          if (field.valueFormat != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                field.valueFormat!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
-            ),
-        ],
-      ),
+              if (field.valueFormat != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    field.valueFormat!,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
+
   
   Widget _buildNumberField(DynamicField field) {
-    final controller = TextEditingController(
-      text: _formValues[field.name]?.toString() ?? '',
-    );
-  
+    final value = _formValues[field.name]?.toString() ?? '';
+    final controller = TextEditingController(text: value);
+
+    if (widget.isReadOnly) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              field.description,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                value.isNotEmpty ? value : '—',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.description,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          Text(field.description, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
-          StatefulBuilder(
-            builder: (context, setStateField) {
-              return TextFormField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  hintText: field.example != null 
-                      ? 'Пример: ${field.example}'
-                      : 'Введите ${field.description.toLowerCase()}',
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  suffixIcon: controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 20),
-                          onPressed: () {
-                            controller.clear();
-                            _formValues[field.name] = 0;
-                            setStateField(() {});
-                          },
-                        )
-                      : null,
-                ),
-                onChanged: (value) {
-                  final numValue = int.tryParse(value);
-                  if (numValue != null) {
-                    _formValues[field.name] = numValue;
-                  } else if (value.isEmpty) {
-                    _formValues[field.name] = 0;
-                  }
-                  setStateField(() {});
-                },
-                validator: (value) {
-                  if (field.required && (value == null || value.isEmpty)) {
-                    return 'Обязательное поле';
-                  }
-                  if (field.minValue != null && (int.tryParse(value ?? '0') ?? 0) < field.minValue!) {
-                    return 'Минимальное значение: ${field.minValue}';
-                  }
-                  return null;
-                },
-              );
+          TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            maxLength: field.maxLength,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: field.example != null
+                  ? 'Пример: ${field.example}'
+                  : 'Введите ${field.description.toLowerCase()}',
+              filled: true,
+              fillColor: Colors.grey[50],
+              suffixIcon: controller.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        controller.clear();
+                        _formValues[field.name] = '';
+                      },
+                    )
+                  : null,
+            ),
+            onChanged: (value) {
+              _formValues[field.name] = value;
+            },
+            validator: (value) {
+              if (field.required && (value == null || value.isEmpty)) {
+                return 'Обязательное поле';
+              }
+              if (value != null && int.tryParse(value) == null) {
+                return 'Введите число';
+              }
+              return null;
             },
           ),
-          if (field.valueFormat != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                field.valueFormat!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
         ],
       ),
     );
   }
 
+
   Widget _buildArrayField(DynamicField field) {
     final items = List<String>.from(_formValues[field.name] ?? []);
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -496,7 +552,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
-          
+
           if (items.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -506,31 +562,41 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             ...items.asMap().entries.map((entry) {
               final index = entry.key;
               final item = entry.value;
-              
-              return ListTile(
-                title: Text(item),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () {
-                    setState(() {
-                      items.removeAt(index);
-                      _formValues[field.name] = items;
-                    });
-                  },
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: Text('• $item')),
+                    if (!widget.isReadOnly)
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          setState(() {
+                            items.removeAt(index);
+                            _formValues[field.name] = items;
+                          });
+                        },
+                      ),
+                  ],
                 ),
               );
             }).toList(),
-          
+
           const SizedBox(height: 10),
-          _buildArrayItemAdder(field, items),
+          if (!widget.isReadOnly) _buildArrayItemAdder(field, items),
         ],
       ),
     );
   }
 
+
   Widget _buildArrayItemAdder(DynamicField field, List<String> items) {
+    if (widget.isReadOnly) return const SizedBox(); // полностью скрываем
+
     final controller = TextEditingController();
-    
+
     return Row(
       children: [
         Expanded(
@@ -561,10 +627,11 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     );
   }
 
+
   Widget _buildObjectField(DynamicField field) {
-    final Map<String, dynamic> objectData = 
+    final Map<String, dynamic> objectData =
         Map<String, dynamic>.from(_formValues[field.name] ?? {});
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -575,7 +642,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
-          
+
           if (objectData.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -585,32 +652,41 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             ...objectData.entries.map((entry) {
               final key = entry.key;
               final value = entry.value;
-              
-              return ListTile(
-                title: Text('$key: $value'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () {
-                    setState(() {
-                      objectData.remove(key);
-                      _formValues[field.name] = objectData;
-                    });
-                  },
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: Text('$key: $value')),
+                    if (!widget.isReadOnly)
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          setState(() {
+                            objectData.remove(key);
+                            _formValues[field.name] = objectData;
+                          });
+                        },
+                      ),
+                  ],
                 ),
               );
             }).toList(),
-          
+
           const SizedBox(height: 10),
-          _buildObjectItemAdder(field, objectData),
+          if (!widget.isReadOnly) _buildObjectItemAdder(field, objectData),
         ],
       ),
     );
   }
 
   Widget _buildObjectItemAdder(DynamicField field, Map<String, dynamic> objectData) {
+    if (widget.isReadOnly) return const SizedBox(); // полностью скрываем
+
     final keyController = TextEditingController();
     final valueController = TextEditingController();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -652,10 +728,10 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               onPressed: () {
                 final key = keyController.text.trim();
                 final value = valueController.text.trim();
-                
+
                 if (key.isNotEmpty && value.isNotEmpty) {
                   setState(() {
-                    objectData[key] = field.format == 'map[string]int' 
+                    objectData[key] = field.format == 'map[string]int'
                         ? int.tryParse(value) ?? 0
                         : value;
                     _formValues[field.name] = objectData;
@@ -671,6 +747,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       ],
     );
   }
+
 
   Future<void> _completeConsultation() async {
     if (widget.appointmentType == 'emergency') {

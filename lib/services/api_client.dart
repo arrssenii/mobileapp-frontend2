@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'auth_service.dart';
@@ -22,18 +24,16 @@ class ApiClient {
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
-        headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
+      //   headers: {
+      //   'Content-Type': 'application/json',
+      //   'Accept': 'application/json',
+      // },
       ),
     );
-    if (kIsWeb) {
-      _dio.options.headers['Access-Control-Allow-Origin'] = '*';
-    }
     _setupInterceptors();
     _loadToken();
   }
+
 
   void setAuthToken(String token) {
     _authToken = token;
@@ -144,7 +144,7 @@ class ApiClient {
   Future<Map<String, dynamic>> loginDoctor(Map<String, dynamic> credentials) async {
     try {
       final response = await _dio.post('/auth', data: credentials);
-      
+      print('Auth URL: ${response.realUri}');
       if (response.statusCode == 200) {
         // Сохраняем токен
         if (response.data['token'] != null) {
@@ -166,15 +166,110 @@ class ApiClient {
         
         return response.data;
       } else {
+        // Формируем детализированное сообщение об ошибке
+        final errorDetails = {
+          'status': response.statusCode,
+          'headers': response.headers.map,
+          'data': response.data,
+          'request': {
+            'method': 'POST',
+            'url': response.realUri.toString(),
+            'headers': _dio.options.headers,
+          }
+        };
+        
+        debugPrint('⚠️ Ошибка авторизации: ${jsonEncode(errorDetails)}');
+        
         throw ApiError(
           statusCode: response.statusCode,
-          message: response.data['message'] ?? 'Ошибка авторизации',
-          rawError: response.data,
+          message: _formatErrorMessage(response),
+          rawError: errorDetails,
         );
       }
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Сетевая ошибка при авторизации');
+      final request = e.requestOptions;
+      final response = e.response;
+      // Форматируем полную информацию об ошибке
+        final errorMessage = '''
+  🚨 КРИТИЧЕСКАЯ ОШИБКА АВТОРИЗАЦИИ
+  ════════════════════════════════
+  📌 Основная информация:
+  • Тип: ${e.type}
+  • Код: ${response?.statusCode ?? 'N/A'}
+  • Сообщение: ${e.message}
+
+  🌐 Сетевая информация:
+  • URL: ${request.uri}
+  • Метод: ${request.method}
+  • Таймаут: ${request.connectTimeout}ms
+
+  📦 Заголовки запроса:
+  ${_formatHeaders(request.headers)}
+
+  📝 Тело запроса:
+  ${request.data is Map ? jsonEncode(request.data) : request.data}
+
+  ════════════════════════════════
+  📡 Ответ сервера:
+  • Статус: ${response?.statusCode}
+  • Статус-текст: ${response?.statusMessage}
+
+  📋 Заголовки ответа:
+  ${response != null ? _formatHeaders(response.headers.map) : 'Нет ответа'}
+
+  📄 Тело ответа:
+  ${response?.data != null ? jsonEncode(response?.data) : 'Пусто'}
+
+  ⏱ Временные метки:
+  • Время запроса: ${DateTime.now()}
+  • Длительность: ${e.response?.headers.value('x-response-time')}
+  ════════════════════════════════
+  ''';
+
+      debugPrint(errorMessage);
+      
+      throw ApiError(
+        statusCode: e.response?.statusCode ?? 500,
+        message: errorMessage, // Полное сообщение для отображения
+        rawError: {
+          'type': e.type.toString(),
+          'request': e.requestOptions.data,
+          'response': e.response?.data,
+        },
+      );
     }
+  }
+
+  // Вспомогательные методы форматирования
+  String _formatErrorMessage(Response response) {
+    final sb = StringBuffer();
+    sb.writeln('Ошибка сервера (${response.statusCode})');
+    
+    if (response.data is Map) {
+      response.data.forEach((key, value) {
+        sb.writeln('• $key: $value');
+      });
+    } else {
+      sb.writeln(response.data);
+    }
+    
+    return sb.toString();
+  }
+
+  String _formatHeaders(Map<String, dynamic> headers) {
+    return headers.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+  }
+
+  String _formatResponse(Response? response) {
+    if (response == null) return 'Нет ответа от сервера';
+    
+    return '''
+  Status: ${response.statusCode}
+  Headers:
+  ${_formatHeaders(response.headers.map)}
+  Body:
+  ${response.data is String ? response.data : jsonEncode(response.data)}
+  ''';
   }
 
   Future<Map<String, dynamic>> getDoctorById(String docId) async {

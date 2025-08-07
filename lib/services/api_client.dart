@@ -12,7 +12,9 @@ class ApiClient {
   Doctor? _currentDoctor;
   final AuthService _authService;
 
-  final String baseUrl = 'http://192.168.30.153:8080/api/v1';
+  // final String baseUrl = 'http://192.168.29.112:65321/api/v1'; // новая 
+  final String baseUrl = 'https://devapp2.kvant-cloud.ru/api/v1'; // новая с сертификатом
+  // final String baseUrl = 'http://192.168.30.153:8080/api/v1'; // старая url 
 
   ApiClient(this._authService) {
     _dio = Dio(

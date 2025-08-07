@@ -28,6 +28,9 @@ class ApiClient {
       },
       ),
     );
+    if (kIsWeb) {
+      _dio.options.headers['Access-Control-Allow-Origin'] = '*';
+    }
     _setupInterceptors();
     _loadToken();
   }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../data/models/patient_model.dart';
 import '../data/models/doctor_model.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ApiClient {
   late Dio _dio;
@@ -15,8 +16,8 @@ class ApiClient {
   final AuthService _authService;
 
   // final String baseUrl = 'http://192.168.29.112:65321/api/v1'; // новая 
-  // final String baseUrl = 'https://devapp2.kvant-cloud.ru/api/v1'; // новая с сертификатом
-  final String baseUrl = 'http://192.168.30.139:8080/api/v1'; // localhost
+  final String baseUrl = 'https://devapp2.kvant-cloud.ru/api/v1'; // новая с сертификатом
+  // final String baseUrl = 'http://192.168.30.139:8080/api/v1'; // localhost
   
 
   ApiClient(this._authService) {
@@ -75,6 +76,80 @@ class ApiClient {
           return handler.next(e);
         },
       ),
+    );
+  }
+
+  // Получить подпись пациента (base64)
+  Future<String?> getPatientSignature(String receptionId) async {
+    return _handleApiCall(
+      () async {
+        final response = await _dio.get(
+          '/emergency/signature/$receptionId',
+          options: Options(validateStatus: (status) => status != null && status < 500),
+        );
+
+        if (response.statusCode == 404) {
+          // У пациента нет подписи — это не ошибка
+          return null;
+        }
+
+        if (response.statusCode != 200) {
+          throw ApiError(
+            statusCode: response.statusCode,
+            message: 'Ошибка загрузки подписи пациента',
+            rawError: response.data,
+          );
+        }
+
+        final json = response.data as Map<String, dynamic>;
+        final data = json['data'] as Map<String, dynamic>?;
+        if (data == null) {
+          throw ApiError(
+            statusCode: response.statusCode,
+            message: 'Некорректный формат ответа: отсутствует data',
+            rawError: response.data,
+          );
+        }
+        
+        return data['signatureBase64'] as String?;
+      },
+      errorMessage: 'Ошибка при загрузке подписи пациента',
+    );
+  }
+
+
+  // Отправка подписи на сервер
+  Future<void> uploadReceptionSignature({
+    required String receptionId,
+    required Uint8List signatureBytes,
+  }) async {
+    final formData = FormData.fromMap({
+      'signature': MultipartFile.fromBytes(
+        signatureBytes,
+        filename: 'signature.png', // или jpg
+        contentType: MediaType('image', 'png'),
+      ),
+    });
+
+    await _handleApiCall(
+      () async {
+        final response = await _dio.post(
+          '/emergency/signature/$receptionId',
+          data: formData,
+          options: Options(
+            headers: {'Content-Type': 'multipart/form-data'},
+          ),
+        );
+
+        if (response.statusCode != 200) {
+          throw ApiError(
+            statusCode: response.statusCode,
+            message: 'Ошибка отправки подписи',
+            rawError: response.data,
+          );
+        }
+      },
+      errorMessage: 'Ошибка при отправке подписи',
     );
   }
 

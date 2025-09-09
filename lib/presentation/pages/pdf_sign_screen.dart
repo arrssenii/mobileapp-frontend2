@@ -1,103 +1,75 @@
-// pdf_signature_screen.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:signature/signature.dart';
-import '../../services/api_client.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class PdfSignatureScreen extends StatefulWidget {
   final String receptionId;
-  final Uint8List pdfData;
+  final Uint8List? existingSignature; // если уже есть подпись
 
   const PdfSignatureScreen({
-    Key? key,
     required this.receptionId,
-    required this.pdfData,
-  }) : super(key: key);
+    this.existingSignature,
+    super.key,
+  });
 
   @override
   State<PdfSignatureScreen> createState() => _PdfSignatureScreenState();
 }
 
 class _PdfSignatureScreenState extends State<PdfSignatureScreen> {
-  final SignatureController _signatureController = SignatureController(
-    penStrokeWidth: 2,
-    penColor: Colors.black,
-    exportBackgroundColor: Colors.transparent,
-  );
+  late SignatureController _controller;
 
-  bool _loading = false;
-
-  Future<void> _saveAndUploadSignature() async {
-    final signatureBytes = await _signatureController.toPngBytes();
-    if (signatureBytes == null) return;
-
-    setState(() => _loading = true);
-    try {
-      final apiClient = Provider.of<ApiClient>(context, listen: false);
-      await apiClient.uploadSignedPdf(
-        pdfBytes: widget.pdfData, // сервер объединяет PDF + подпись
-        receptionId: widget.receptionId,
-        signatureBytes: signatureBytes,
-        filename: 'signed.pdf',
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Подписанный PDF отправлен на сервер')),
-      );
-      Navigator.pop(context, true); // вернем true, чтобы обновить PDF
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка отправки PDF: $e')),
-      );
-    } finally {
-      setState(() => _loading = false);
-    }
+  @override
+  void initState() {
+    super.initState();
+    _controller = SignatureController(
+      penStrokeWidth: 2,
+      penColor: Colors.black,
+      exportBackgroundColor: Colors.white,
+    );
   }
 
   @override
   void dispose() {
-    _signatureController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveSignature() async {
+    if (_controller.isNotEmpty) {
+      final signatureBytes = await _controller.toPngBytes();
+      if (signatureBytes != null) {
+        Navigator.pop(context, signatureBytes); // возвращаем подпись на предыдущий экран
+      }
+    } else {
+      Navigator.pop(context); // если пустая подпись
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Подпись документа')),
-      body: Stack(
+      appBar: AppBar(
+        title: const Text('Подпись пациента'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check),
+            onPressed: _saveSignature,
+          ),
+        ],
+      ),
+      body: Column(
         children: [
-          SfPdfViewer.memory(widget.pdfData),
-          Positioned.fill(
+          Expanded(
             child: Signature(
-              controller: _signatureController,
-              backgroundColor: Colors.transparent,
+              controller: _controller,
+              backgroundColor: Colors.grey[200]!,
             ),
           ),
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: () => _signatureController.clear(),
-                  child: const Text('Очистить подпись'),
-                ),
-                ElevatedButton(
-                  onPressed: _loading ? null : _saveAndUploadSignature,
-                  child: _loading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Сохранить и отправить'),
-                ),
-              ],
-            ),
+          TextButton.icon(
+            icon: const Icon(Icons.clear),
+            label: const Text('Очистить'),
+            onPressed: () => _controller.clear(),
           ),
         ],
       ),

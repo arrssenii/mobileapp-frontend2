@@ -1,6 +1,9 @@
 // pages/patient_history_screen.dart
+import 'dart:developer';
+
 import 'package:demo_app/presentation/pages/consultation_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:demo_app/services/api_client.dart';
 
@@ -53,6 +56,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
           // Специализация теперь хранится как строка
           'diagnosis': reception['diagnosis']?.toString() ?? 'Диагноз не указан',
           'recommendations': reception['recommendations']?.toString() ?? 'Рекомендации не указаны',
+          'source': reception['source']?.toString() ?? 'hospital',
         };
       }).toList();
   
@@ -113,7 +117,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                       itemBuilder: (context, index) {
                         final visit = _visits[index];
                         return InkWell(
-                          onTap: () {;
+                          onTap: () {
                             final doctor = visit['doctor'];
                             if (doctor is Map<String, dynamic>) {
                               final doctorId = doctor['doctor_id'];
@@ -123,21 +127,23 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                             }
                             final doctorId = doctor != null ? doctor['doctor_id'] as int? : null;
                             final int? receptionId = visit['reception_id'];
-                            print('Recep ID: $receptionId');
                             if (doctorId == null || receptionId == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Ошибка: отсутствуют необходимые данные для загрузки заключения')),
                               );
                               return;
                             }
+                            final source = visit['source'] ?? 'hospital';
+                            final appointmentType = source == 'smp' ? 'emergency' : 'appointment';
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => ConsultationScreen(
                                   patientName: widget.patientName,
-                                  appointmentType: 'reception', // или динамически, если есть
+                                  appointmentType: appointmentType, // или динамически, если есть
                                   recordId: receptionId,
                                   doctorId: doctorId,
+                                  emergencyCallId: receptionId, // нужно для запроса из скорой
                                   // recordId: visit['id'] as int,
                                   // doctorId: visit['doctor_id'] as int? ?? 0,
                                   isReadOnly: true, // Открываем только для просмотра

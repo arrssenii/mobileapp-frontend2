@@ -1,9 +1,13 @@
+import 'dart:typed_data';
+
 import 'package:demo_app/presentation/pages/pdf_sign_screen.dart';
 import 'package:demo_app/presentation/pages/pdf_view_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_client.dart';
 import 'package:provider/provider.dart';
+import '../../services/pdf_service.dart';
 import 'consultation_screen.dart';
 import 'patient_detail_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
@@ -368,6 +372,8 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
         ? DateTime.now().year - DateTime.parse(patient['birth_date']).year
         : '';
 
+    final pdfService = PdfService();
+    final apiClient = Provider.of<ApiClient>(context, listen: false);
     return DefaultTabController(
       length: 2,
       child: CustomCard(
@@ -377,7 +383,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Левая колонка (основная информация)
+              // Левая колонка
               Expanded(
                 flex: 2,
                 child: Column(
@@ -397,8 +403,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                           ? 'Обследование завершено'
                           : 'Требуется обследование',
                       style: TextStyle(
-                        color:
-                            patient['hasConclusion'] ? Colors.green : Colors.orange,
+                        color: patient['hasConclusion'] ? Colors.green : Colors.orange,
                       ),
                     ),
                   ],
@@ -407,7 +412,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
 
               const SizedBox(width: 12),
 
-              // Правая колонка (табы с прививками и согласием)
+              // Правая колонка с табами
               Expanded(
                 flex: 3,
                 child: Column(
@@ -420,7 +425,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                       ],
                     ),
                     SizedBox(
-                      height: 180, // фиксируем высоту, чтобы табы не схлопывались
+                      height: 180,
                       child: TabBarView(
                         children: [
                           // Прививки
@@ -432,86 +437,127 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                           ),
 
                           // Согласие
-                         Row(
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              // Кнопка открыть PDF
                               Flexible(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 100,
-                                    maxWidth: 200,
-                                    minHeight: 36,
-                                    maxHeight: 50,
-                                  ),
-                                  child: ElevatedButton.icon(
-                                    icon: const Icon(Icons.picture_as_pdf, size: 18),
-                                    label: const Text('Открыть PDF', textAlign: TextAlign.center),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    ),
-                                    onPressed: () async {
-                                      final receptionId = patient['receptionId']?.toString();
-                                      if (receptionId != null) {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => PdfViewerScreen(receptionId: receptionId),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final buttonWidth = constraints.maxWidth * 0.45;
+                                    return SizedBox(
+                                      width: buttonWidth.clamp(100, 200),
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(Icons.picture_as_pdf, size: 18),
+                                        label: const Text('Открыть PDF', textAlign: TextAlign.center),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue,
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(5),
                                           ),
-                                        );
-                                      }
-                                    },
-                                  ),
+                                        ),
+                                        onPressed: () async {
+                                          try {
+                                            // final receptionId = patient['receptionId']?.toString();
+                                            // final patientSignatureBase64 = await apiClient.getPatientSignature(receptionId!);
+                                            // pdfService.downloadSignature(patientSignatureBase64!);
+
+                                            final pdfFile = await pdfService.generateFullPatientAgreementWithBackendSignature(
+                                              fullName: fullName,
+                                              address: patient['address'] ?? 'не указано',
+                                              receptionId: patient['receptionId'].toString(),
+                                              apiClient: apiClient,
+                                            );
+                                            // Получаем байты PDF
+                                            Uint8List pdfBytes;
+                                            if (kIsWeb) {
+                                              // На вебе pdfFile будет null, поэтому открываем PDF через Blob
+                                              await pdfService.openPdf(pdfFile);
+                                              // Если тебе нужны байты для PdfViewerScreen на вебе, нужно изменить метод генерации PDF
+                                              // чтобы он возвращал Uint8List на вебе
+                                              pdfBytes = await pdfFile!.readAsBytes(); 
+                                            } else {
+                                              // Мобильные/десктопные платформы
+                                              pdfBytes = await pdfFile!.readAsBytes(); // ! безопасно, т.к. на мобильных pdfFile не null
+                                            }
+
+                                            // Открываем экран с PDF
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => PdfViewerScreen(pdfBytes: pdfBytes),
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Ошибка генерации PDF: $e')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
+
                               const SizedBox(width: 12),
+
+                              // Кнопка подписать
                               Flexible(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 100,
-                                    maxWidth: 200,
-                                    minHeight: 36,
-                                    maxHeight: 50,
-                                  ),
-                                  child: ElevatedButton.icon(
-                                    icon: const Icon(Icons.edit, size: 18),
-                                    label: const Text('Подписать', textAlign: TextAlign.center),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    ),
-                                    onPressed: () async {
-                                      final receptionId = patient['receptionId']?.toString();
-                                      if (receptionId != null) {
-                                        final apiClient = Provider.of<ApiClient>(context, listen: false);
-                                        try {
-                                          final pdfData = await apiClient.getReceptionPdf(receptionId);
-                                          final updated = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => PdfSignatureScreen(
-                                                receptionId: receptionId,
-                                                pdfData: pdfData,
-                                              ),
-                                            ),
-                                          );
-                                          if (updated == true) {
-                                            // можно обновить данные
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final buttonWidth = constraints.maxWidth * 0.45;
+                                    return SizedBox(
+                                      width: buttonWidth.clamp(100, 200),
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(Icons.edit, size: 18),
+                                        label: const Text('Подписать', textAlign: TextAlign.center),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(5),
+                                          ),
+                                        ),
+                                        onPressed: () async {
+                                          final receptionId = patient['receptionId']?.toString();
+                                          if (receptionId != null) {
+                                            try {
+
+                                              // открываем экран подписи
+                                              final signatureBytes = await Navigator.push<Uint8List>(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => PdfSignatureScreen(
+                                                    receptionId: receptionId,
+                                                  ),
+                                                ),
+                                              );
+
+                                              if (signatureBytes != null) {
+
+                                                // можно сразу сохранить на сервер через API
+                                                await apiClient.uploadReceptionSignature(
+                                                  receptionId: receptionId,
+                                                  signatureBytes: signatureBytes
+                                                  );
+
+                                                // обновляем экран
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Подпись добавлена')),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Ошибка подписи: $e')),
+                                              );
+                                            }
                                           }
-                                        } catch (e) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Ошибка загрузки PDF: $e')),
-                                          );
-                                        }
-                                      }
-                                    },
-                                  ),
+                                        },
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ],
@@ -523,7 +569,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                 ),
               ),
 
-              // Кнопка заключения (справа снизу)
+              // Кнопка заключения справа
               IconButton(
                 icon: const Icon(Icons.note_alt, color: Colors.blue),
                 tooltip: "Заключение",
@@ -589,12 +635,12 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     print('ReceptionId: $receptionId'); // для проверки
     if (receptionId == null) return;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PdfViewerScreen(receptionId: receptionId),
-      ),
-    );
+    // Navigator.push(
+      // context,
+      // MaterialPageRoute(
+        // builder: (context) => PdfViewerScreen(receptionId: receptionId),
+      // ),
+    // );
   }
 
   void _checkCallCompletion() {
@@ -689,31 +735,4 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     );
   }
 
-
-
-
-  void _openPatientDetails(Map<String, dynamic> patient) {
-    final patientData = {
-      'id': patient['id'],
-      'fullName': ((patient['lastName'] ?? '') + ' ' + (patient['firstName'] ?? '') + ' ' + (patient['middleName'] ?? '')).trim(),
-      'address': widget.call['address'],
-      'phone': '+7 (XXX) XXX-XX-XX',
-      'diagnosis': 'Экстренный вызов',
-      'room': 'Не госпитализирован',
-      'gender': 'Мужской',
-      'birthDate': '01.01.1980',
-      'snils': '123-456-789 00',
-      'oms': '1234567890123456',
-      'passport': '1234 567890',
-      'email': 'patient@example.com',
-      'contraindications': 'Нет',
-    };
-    
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PatientDetailScreen(patientId: patientData['id']),
-      ),
-    );
-  }
 }

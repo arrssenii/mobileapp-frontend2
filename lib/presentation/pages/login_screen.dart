@@ -44,11 +44,45 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameController = TextEditingController(text: '+7');
-  final _passwordController = TextEditingController();
+  late TextEditingController _usernameController;
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: '+7');
+    _usernameController.addListener(_onPhoneChanged);
+  }
+
+  void _onPhoneChanged() {
+    String text = _usernameController.text;
+    if (!text.startsWith('+7')) {
+      // Если пользователь каким-то образом удалил +7, восстанавливаем
+      _usernameController.value = const TextEditingValue(
+        text: '+7',
+        selection: TextSelection.collapsed(offset: 2),
+      );
+      return;
+    }
+
+    // Оставляем только цифры после +7
+    String digitsOnly = text.substring(2).replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.length > 10) {
+      digitsOnly = digitsOnly.substring(0, 10);
+    }
+
+    String newText = '+7$digitsOnly';
+    if (newText != text) {
+      _usernameController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
+      );
+    }
+  }
 
   @override
   void dispose() {
+    _usernameController.removeListener(_onPhoneChanged);
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();

@@ -5,7 +5,6 @@ import 'package:intl/intl.dart'; // Добавить эту строку
 import 'package:flutter/services.dart';
 import '../widgets/custom_form_field.dart';
 import '../widgets/date_picker_icon_button.dart';
-import '../widgets/section_header.dart'; 
 import '../../services/api_client.dart';
 import '../../data/models/patient_model.dart';
 

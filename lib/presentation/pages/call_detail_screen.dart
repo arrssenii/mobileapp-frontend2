@@ -14,6 +14,7 @@ import '../widgets/date_picker_icon_button.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/status_chip.dart';
 import 'package:signature/signature.dart';
+import '../../core/theme/theme_config.dart';
 
 class CallDetailScreen extends StatefulWidget {
   final Map<String, dynamic> call;
@@ -44,15 +45,35 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
   final _lastNameController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _middleNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _secondPhoneController = TextEditingController();
+  final _snilsController = TextEditingController();
+  final _documentSeriesController = TextEditingController();
+  final _documentNumberController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _omsPolicyController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _allergyController = TextEditingController();
+  
   DateTime? _birthDate;
   bool? _isMale;
+  String? _documentType;
   bool _isSaving = false;
+
+  final List<String> _documentTypes = [
+    'Паспорт РФ',
+    'Заграничный паспорт',
+    'Водительское удостоверение',
+    'Свидетельство о рождении',
+    'Военный билет',
+    'Иной документ'
+  ];
 
   Future<void> _savePatient() async {
     if (!_formKey.currentState!.validate()) return;
     if (_birthDate == null || _isMale == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заполните все поля')),
+        const SnackBar(content: Text('Заполните обязательные поля')),
       );
       return;
     }
@@ -61,6 +82,27 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
     
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
+      
+      // Собираем данные пациента
+      final patientData = {
+        'emergencyCallId': widget.emergencyCallId,
+        'firstName': _firstNameController.text,
+        'middleName': _middleNameController.text,
+        'lastName': _lastNameController.text,
+        'birthDate': _birthDate!,
+        'isMale': _isMale!,
+        'phone': _phoneController.text.isNotEmpty ? _phoneController.text : widget.patientPhone,
+        'secondPhone': _secondPhoneController.text,
+        'snils': _snilsController.text,
+        'documentType': _documentType,
+        'documentSeries': _documentSeriesController.text,
+        'documentNumber': _documentNumberController.text,
+        'address': _addressController.text,
+        'omsPolicy': _omsPolicyController.text,
+        'email': _emailController.text,
+        'allergy': _allergyController.text,
+      };
+
       final response = await apiClient.createEmergencyReceptionPatient(
         emergencyCallId: widget.emergencyCallId,
         firstName: _firstNameController.text,
@@ -78,7 +120,6 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
       if (patientId == null || receptionId == null) {
         throw Exception('Не удалось получить ID созданного пациента или заключения');
       }
-      // final fullName = '${_firstNameController.text ?? ''} ${ _lastNameController.text ?? ''} ${_middleNameController.text ?? ''}'.trim();
 
       final newPatient = {
         'id': receptionId,        // ID заключения (reception)
@@ -89,7 +130,16 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
         'birthDate': _birthDate,
         'isMale': _isMale,
         'hasConclusion': false,
-        'phone': widget.patientPhone,
+        'phone': _phoneController.text.isNotEmpty ? _phoneController.text : widget.patientPhone,
+        'secondPhone': _secondPhoneController.text,
+        'snils': _snilsController.text,
+        'documentType': _documentType,
+        'documentSeries': _documentSeriesController.text,
+        'documentNumber': _documentNumberController.text,
+        'address': _addressController.text,
+        'omsPolicy': _omsPolicyController.text,
+        'email': _emailController.text,
+        'allergy': _allergyController.text,
       };
 
       widget.onPatientCreated(newPatient);
@@ -99,7 +149,7 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
         SnackBar(content: Text('Ошибка: ${e.toString()}')),
       );
     } finally {
-      setState(() => _isSaving = false);  
+      setState(() => _isSaving = false);
     }
   }
 
@@ -112,10 +162,11 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
           key: _formKey,
           child: Column(
             children: [
+              // Основные данные
               TextFormField(
                 controller: _lastNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Фамилия',
+                  labelText: 'Фамилия *',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
@@ -125,7 +176,7 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
               TextFormField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Имя',
+                  labelText: 'Имя *',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
@@ -135,16 +186,16 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
               TextFormField(
                 controller: _middleNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Отчество',
+                  labelText: 'Отчество *',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Введите Отчество' : null,
+                    value == null || value.isEmpty ? 'Введите отчество' : null,
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('Дата рождения:'),
+                  const Text('Дата рождения *:'),
                   const SizedBox(width: 8),
                   Expanded(
                     child: DatePickerIconButton(
@@ -158,7 +209,7 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('Пол:'),
+                  const Text('Пол *:'),
                   const SizedBox(width: 10),
                   Expanded(
                     child: DropdownButton<bool>(
@@ -179,6 +230,133 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              
+              // Контактные данные
+              TextFormField(
+                controller: _phoneController,
+                decoration: InputDecoration(
+                  labelText: 'Номер телефона',
+                  hintText: widget.patientPhone,
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _secondPhoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Второй номер телефона',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Адрес',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 8),
+              
+              // Документы
+              TextFormField(
+                controller: _snilsController,
+                decoration: const InputDecoration(
+                  labelText: 'СНИЛС',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Text('Тип документа:'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<String>(
+                      value: _documentType,
+                      isExpanded: true,
+                      onChanged: (value) {
+                        setState(() {
+                          _documentType = value;
+                        });
+                      },
+                      items: _documentTypes.map((type) {
+                        return DropdownMenuItem(
+                          value: type,
+                          child: Text(type),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _documentSeriesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Серия документа',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _documentNumberController,
+                      decoration: const InputDecoration(
+                        labelText: 'Номер документа',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _omsPolicyController,
+                decoration: const InputDecoration(
+                  labelText: 'Полис ОМС',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Медицинская информация
+              TextFormField(
+                controller: _allergyController,
+                decoration: const InputDecoration(
+                  labelText: 'Аллергия',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 8),
+              
+              const Text(
+                '* - обязательные поля',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ],
           ),
         ),
@@ -189,8 +367,14 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
           child: const Text('Отмена'),
         ),
         ElevatedButton(
-          onPressed: _savePatient,
-          child: const Text('Сохранить'),
+          onPressed: _isSaving ? null : _savePatient,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Сохранить'),
         ),
       ],
     );
@@ -374,210 +558,249 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
 
     final pdfService = PdfService();
     final apiClient = Provider.of<ApiClient>(context, listen: false);
+    
     return DefaultTabController(
       length: 2,
       child: CustomCard(
         margin: const EdgeInsets.only(bottom: 12),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Левая колонка
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(fullName,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text('Дата рождения: $birthDate'),
-                    Text('Возраст: $age лет'),
-                    if (patient['is_male'] != null)
-                      Text(patient['is_male'] ? 'Мужской' : 'Женский'),
-                    const SizedBox(height: 8),
-                    Text(
-                      patient['hasConclusion']
-                          ? 'Обследование завершено'
-                          : 'Требуется обследование',
-                      style: TextStyle(
-                        color: patient['hasConclusion'] ? Colors.green : Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              // Правая колонка с табами
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const TabBar(
-                      tabs: [
-                        Tab(text: "Прививки"),
-                        Tab(text: "Согласие"),
+              // Верхняя часть с информацией о пациенте
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Информация о пациенте
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                fullName,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: patient['hasConclusion']
+                                    ? AppTheme.successColor.withOpacity(0.1)
+                                    : AppTheme.warningColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: patient['hasConclusion'] ? AppTheme.successColor : AppTheme.warningColor,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                patient['hasConclusion'] ? 'Завершено' : 'В процессе',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: patient['hasConclusion'] ? AppTheme.successColor : AppTheme.warningColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _buildInfoRow('Дата рождения:', birthDate),
+                        _buildInfoRow('Возраст:', '$age лет'),
+                        if (patient['is_male'] != null)
+                          _buildInfoRow('Пол:', patient['is_male'] ? 'Мужской' : 'Женский'),
                       ],
                     ),
-                    SizedBox(
-                      height: 180,
-                      child: TabBarView(
-                        children: [
-                          // Прививки
-                          Center(
-                            child: Text(
-                              "Прививки: пока пусто",
-                              style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  
+                  // Кнопка заключения
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => _startConsultation(patient),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.secondaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      'Заключение',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Табы для документов
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TabBar(
+                    labelColor: Colors.black,
+                    unselectedLabelColor: Colors.black54,
+                    indicatorColor: Colors.black,
+                    tabs: const [
+                      Tab(text: "Прививки"),
+                      Tab(text: "Согласие"),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 120,
+                    child: TabBarView(
+                      children: [
+                        // Прививки
+                        Center(
+                          child: Text(
+                            "Информация о прививках отсутствует",
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
                             ),
                           ),
+                        ),
 
-                          // Согласие
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Кнопка открыть PDF
-                              Flexible(
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final buttonWidth = constraints.maxWidth * 0.45;
-                                    return SizedBox(
-                                      width: buttonWidth.clamp(100, 200),
-                                      child: ElevatedButton.icon(
-                                        icon: const Icon(Icons.picture_as_pdf, size: 18),
-                                        label: const Text('Открыть PDF', textAlign: TextAlign.center),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.blue,
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(5),
-                                          ),
+                        // Согласие
+                        Column(
+                          children: [
+                            const SizedBox(height: 8),
+                            const Text(
+                              "Работа с документами согласия",
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.picture_as_pdf, size: 16),
+                                  label: const Text('Открыть PDF'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.secondaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    try {
+                                      final pdfFile = await pdfService.generateFullPatientAgreementWithBackendSignature(
+                                        fullName: fullName,
+                                        address: patient['address'] ?? 'не указано',
+                                        receptionId: patient['receptionId'].toString(),
+                                        apiClient: apiClient,
+                                      );
+                                      Uint8List pdfBytes;
+                                      if (kIsWeb) {
+                                        await pdfService.openPdf(pdfFile);
+                                        pdfBytes = await pdfFile!.readAsBytes();
+                                      } else {
+                                        pdfBytes = await pdfFile!.readAsBytes();
+                                      }
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => PdfViewerScreen(pdfBytes: pdfBytes),
                                         ),
-                                        onPressed: () async {
-                                          try {
-                                            // final receptionId = patient['receptionId']?.toString();
-                                            // final patientSignatureBase64 = await apiClient.getPatientSignature(receptionId!);
-                                            // pdfService.downloadSignature(patientSignatureBase64!);
-
-                                            final pdfFile = await pdfService.generateFullPatientAgreementWithBackendSignature(
-                                              fullName: fullName,
-                                              address: patient['address'] ?? 'не указано',
-                                              receptionId: patient['receptionId'].toString(),
-                                              apiClient: apiClient,
-                                            );
-                                            // Получаем байты PDF
-                                            Uint8List pdfBytes;
-                                            if (kIsWeb) {
-                                              // На вебе pdfFile будет null, поэтому открываем PDF через Blob
-                                              await pdfService.openPdf(pdfFile);
-                                              // Если тебе нужны байты для PdfViewerScreen на вебе, нужно изменить метод генерации PDF
-                                              // чтобы он возвращал Uint8List на вебе
-                                              pdfBytes = await pdfFile!.readAsBytes(); 
-                                            } else {
-                                              // Мобильные/десктопные платформы
-                                              pdfBytes = await pdfFile!.readAsBytes(); // ! безопасно, т.к. на мобильных pdfFile не null
-                                            }
-
-                                            // Открываем экран с PDF
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => PdfViewerScreen(pdfBytes: pdfBytes),
-                                              ),
-                                            );
-                                          } catch (e) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Ошибка генерации PDF: $e')),
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    );
+                                      );
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Ошибка генерации PDF: $e')),
+                                      );
+                                    }
                                   },
                                 ),
-                              ),
-
-                              const SizedBox(width: 12),
-
-                              // Кнопка подписать
-                              Flexible(
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final buttonWidth = constraints.maxWidth * 0.45;
-                                    return SizedBox(
-                                      width: buttonWidth.clamp(100, 200),
-                                      child: ElevatedButton.icon(
-                                        icon: const Icon(Icons.edit, size: 18),
-                                        label: const Text('Подписать', textAlign: TextAlign.center),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(5),
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.edit, size: 16),
+                                  label: const Text('Подписать'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    final receptionId = patient['receptionId']?.toString();
+                                    if (receptionId != null) {
+                                      try {
+                                        final signatureBytes = await Navigator.push<Uint8List>(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => PdfSignatureScreen(
+                                              receptionId: receptionId,
+                                            ),
                                           ),
-                                        ),
-                                        onPressed: () async {
-                                          final receptionId = patient['receptionId']?.toString();
-                                          if (receptionId != null) {
-                                            try {
-
-                                              // открываем экран подписи
-                                              final signatureBytes = await Navigator.push<Uint8List>(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => PdfSignatureScreen(
-                                                    receptionId: receptionId,
-                                                  ),
-                                                ),
-                                              );
-
-                                              if (signatureBytes != null) {
-
-                                                // можно сразу сохранить на сервер через API
-                                                await apiClient.uploadReceptionSignature(
-                                                  receptionId: receptionId,
-                                                  signatureBytes: signatureBytes
-                                                  );
-
-                                                // обновляем экран
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(content: Text('Подпись добавлена')),
-                                                );
-                                              }
-                                            } catch (e) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Ошибка подписи: $e')),
-                                              );
-                                            }
-                                          }
-                                        },
-                                      ),
-                                    );
+                                        );
+                                        if (signatureBytes != null) {
+                                          await apiClient.uploadReceptionSignature(
+                                            receptionId: receptionId,
+                                            signatureBytes: signatureBytes
+                                          );
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Подпись добавлена')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Ошибка подписи: $e')),
+                                        );
+                                      }
+                                    }
                                   },
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-
-              // Кнопка заключения справа
-              IconButton(
-                icon: const Icon(Icons.note_alt, color: Colors.blue),
-                tooltip: "Заключение",
-                onPressed: () => _startConsultation(patient),
+                  ),
+                ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -704,27 +927,39 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
         actions: [
           // Оставляем только кнопку для начала обследования (если не завершено)
           if (!patient['hasConclusion'])
-            TextButton(
-              child: const Text('Согласие на осмотр'),
+            ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 _openConsentDocument(patient);
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4682B4),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Согласие на осмотр'),
             ),
-            TextButton(
-              child: const Text('Начать обследование'),
+            ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 _startConsultation(patient);
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4682B4),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Начать обследование'),
             ),
             if (patient['hasConclusion'])
-          TextButton(
-            child: const Text('Редактировать заключение'),
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               _startConsultation(patient);
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4682B4),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Редактировать заключение'),
           ),
           TextButton(
             child: const Text('Закрыть'),

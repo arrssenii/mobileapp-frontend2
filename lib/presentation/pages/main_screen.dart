@@ -14,7 +14,6 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    ScheduleScreen(),
     PatientListScreen(),
     CallsScreen(),
   ];
@@ -49,11 +48,6 @@ class _MainScreenState extends State<MainScreen> {
             currentIndex: _currentIndex,
             onTap: (index) => setState(() => _currentIndex = index),
             items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_today),
-                activeIcon: Icon(Icons.calendar_today, size: 28),
-                label: 'Расписание',
-              ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.people_outline),
                 activeIcon: Icon(Icons.people, size: 28),

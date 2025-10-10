@@ -344,61 +344,145 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final additionalFields = split['additional']!;
 
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(24.0),
       child: Form(
         key: _formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Специализация: ${_documentType ?? 'Неизвестно'}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            // Заголовок специализации
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: AppInputTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppInputTheme.primaryColor.withOpacity(0.3)),
+              ),
+              child: Text(
+                'Специализация: ${_documentType ?? 'Неизвестно'}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppInputTheme.primaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            
+            // Основной контент в двух колонках
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Левая колонка - основные поля
                   Expanded(
-                    child: ListView(
-                      children: mainFields.map((field) => _buildField(field)).toList(),
+                    child: _buildFieldColumn(
+                      title: 'Основные данные',
+                      fields: mainFields,
+                      color: AppInputTheme.primaryColor.withOpacity(0.05),
                     ),
                   ),
-                  const SizedBox(width: 20),
+                  const SizedBox(width: 24),
+                  // Правая колонка - дополнительные поля
                   Expanded(
-                    child: ListView(
-                      children: additionalFields.map((field) => _buildField(field)).toList(),
+                    child: _buildFieldColumn(
+                      title: 'Дополнительные данные',
+                      fields: additionalFields,
+                      color: Colors.grey[50],
                     ),
                   ),
                 ],
               ),
             ),
-            _buildMedServicesSection(),
-            const SizedBox(height: 20),
             
+            const SizedBox(height: 24),
+            _buildMedServicesSection(),
+            const SizedBox(height: 24),
+            
+            // Кнопка по центру снизу
             if (!widget.isReadOnly)
-              SizedBox(
-                width: 250,
-                child: ElevatedButton(
-                  onPressed: widget.appointmentType == 'emergency'
-                      ? _completeEmergencyConsultation
-                      : _completeConsultation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppInputTheme.successColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              Center(
+                child: SizedBox(
+                  width: 280,
+                  child: ElevatedButton(
+                    onPressed: widget.appointmentType == 'emergency'
+                        ? _completeEmergencyConsultation
+                        : _completeConsultation,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppInputTheme.successColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                      shadowColor: AppInputTheme.successColor.withOpacity(0.3),
                     ),
-                    elevation: 2,
-                  ),
-                  child: const Text(
-                    'Завершить консультацию',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    child: const Text(
+                      'Завершить консультацию',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFieldColumn({
+    required String title,
+    required List<DynamicField> fields,
+    required Color? color,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppInputTheme.borderColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Заголовок колонки
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppInputTheme.textPrimary,
+              ),
+            ),
+          ),
+          
+          // Разделитель
+          Container(
+            height: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            color: AppInputTheme.borderColor.withOpacity(0.3),
+          ),
+          
+          // Поля
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ListView.separated(
+                itemCount: fields.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 16),
+                itemBuilder: (context, index) => _buildField(fields[index]),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -514,56 +598,154 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final rawItems = _formValues[field.name] ?? [];
     final items = (rawItems is List) ? rawItems : [];
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppInputTheme.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.description,
-            style: AppInputTheme.labelStyle,
+          // Заголовок с иконкой
+          Row(
+            children: [
+              Icon(
+                Icons.list,
+                color: AppInputTheme.primaryColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  field.description,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppInputTheme.textPrimary,
+                  ),
+                ),
+              ),
+              if (field.required)
+                const Text(
+                  '*',
+                  style: TextStyle(
+                    color: AppInputTheme.errorColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
 
+          // Список элементов
           if (items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Text('Нет элементов', style: TextStyle(color: AppInputTheme.textSecondary)),
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppInputTheme.borderColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppInputTheme.textSecondary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Нет элементов',
+                    style: TextStyle(
+                      color: AppInputTheme.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
             )
           else
-            ...items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
+            Column(
+              children: items.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
 
-              String displayText;
-              if (item is Map) {
-                displayText = item.entries.map((e) => "${e.key}: ${e.value}").join(", ");
-              } else {
-                displayText = item.toString();
-              }
+                String displayText;
+                if (item is Map) {
+                  displayText = item.entries.map((e) => "${e.key}: ${e.value}").join(", ");
+                } else {
+                  displayText = item.toString();
+                }
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: Text('• $displayText')),
-                    if (!widget.isReadOnly)
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: AppInputTheme.errorColor),
-                        onPressed: () {
-                          setState(() {
-                            items.removeAt(index);
-                            _formValues[field.name] = items;
-                          });
-                        },
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppInputTheme.borderColor.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: AppInputTheme.primaryColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppInputTheme.primaryColor,
+                            ),
+                          ),
+                        ),
                       ),
-                  ],
-                ),
-              );
-            }).toList(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          displayText,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppInputTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (!widget.isReadOnly)
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: AppInputTheme.errorColor,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              items.removeAt(index);
+                              _formValues[field.name] = items;
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           if (!widget.isReadOnly) _buildArrayItemAdder(field, items.cast<String>()),
         ],
       ),
@@ -573,35 +755,75 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   Widget _buildArrayItemAdder(DynamicField field, List<String> items) {
     final controller = TextEditingController();
 
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Новый элемент',
-              isDense: true,
-            ).applyDefaults(AppInputTheme.inputDecorationTheme),
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppInputTheme.borderColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Добавить новый элемент:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppInputTheme.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        ElevatedButton(
-          onPressed: () {
-            if (controller.text.isNotEmpty) {
-              setState(() {
-                items.add(controller.text);
-                _formValues[field.name] = items;
-                controller.clear();
-              });
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppInputTheme.primaryColor,
-            foregroundColor: Colors.white,
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: 'Введите значение...',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.borderColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.borderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.primaryColor),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  final text = controller.text.trim();
+                  if (text.isNotEmpty) {
+                    setState(() {
+                      items.add(text);
+                      _formValues[field.name] = items;
+                      controller.clear();
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppInputTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: const Text('Добавить'),
+              ),
+            ],
           ),
-          child: const Text('Добавить'),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -609,49 +831,144 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final Map<String, dynamic> objectData =
         Map<String, dynamic>.from(_formValues[field.name] ?? {});
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppInputTheme.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.description,
-            style: AppInputTheme.labelStyle,
+          // Заголовок с иконкой
+          Row(
+            children: [
+              Icon(
+                Icons.table_chart,
+                color: AppInputTheme.primaryColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  field.description,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppInputTheme.textPrimary,
+                  ),
+                ),
+              ),
+              if (field.required)
+                const Text(
+                  '*',
+                  style: TextStyle(
+                    color: AppInputTheme.errorColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
 
+          // Список элементов объекта
           if (objectData.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Text('Нет элементов', style: TextStyle(color: AppInputTheme.textSecondary)),
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppInputTheme.borderColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppInputTheme.textSecondary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Нет элементов',
+                    style: TextStyle(
+                      color: AppInputTheme.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
             )
           else
-            ...objectData.entries.map((entry) {
-              final key = entry.key;
-              final value = entry.value;
+            Column(
+              children: objectData.entries.map((entry) {
+                final key = entry.key;
+                final value = entry.value;
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: Text('$key: $value')),
-                    if (!widget.isReadOnly)
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: AppInputTheme.errorColor),
-                        onPressed: () {
-                          setState(() {
-                            objectData.remove(key);
-                            _formValues[field.name] = objectData;
-                          });
-                        },
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppInputTheme.borderColor.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppInputTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          key,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppInputTheme.primaryColor,
+                          ),
+                        ),
                       ),
-                  ],
-                ),
-              );
-            }).toList(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          value.toString(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppInputTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (!widget.isReadOnly)
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: AppInputTheme.errorColor,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              objectData.remove(key);
+                              _formValues[field.name] = objectData;
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           if (!widget.isReadOnly) _buildObjectItemAdder(field, objectData),
         ],
       ),
@@ -664,64 +981,106 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final keyController = TextEditingController();
     final valueController = TextEditingController();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Добавить элемент:',
-          style: TextStyle(fontWeight: FontWeight.w500, color: AppInputTheme.textSecondary),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: keyController,
-                decoration: InputDecoration(
-                  hintText: field.keyFormat ?? 'Ключ',
-                  isDense: true,
-                ).applyDefaults(AppInputTheme.inputDecorationTheme),
-              ),
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppInputTheme.borderColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Добавить новый элемент:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppInputTheme.textSecondary,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: valueController,
-                keyboardType: field.format == 'map[string]int'
-                    ? TextInputType.number
-                    : TextInputType.text,
-                decoration: InputDecoration(
-                  hintText: field.valueFormat ?? 'Значение',
-                  isDense: true,
-                ).applyDefaults(AppInputTheme.inputDecorationTheme),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: keyController,
+                  decoration: InputDecoration(
+                    hintText: field.keyFormat ?? 'Ключ',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.borderColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.borderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.primaryColor),
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                final key = keyController.text.trim();
-                final value = valueController.text.trim();
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: valueController,
+                  keyboardType: field.format == 'map[string]int'
+                      ? TextInputType.number
+                      : TextInputType.text,
+                  decoration: InputDecoration(
+                    hintText: field.valueFormat ?? 'Значение',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.borderColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.borderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: AppInputTheme.primaryColor),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  final key = keyController.text.trim();
+                  final value = valueController.text.trim();
 
-                if (key.isNotEmpty && value.isNotEmpty) {
-                  setState(() {
-                    objectData[key] = field.format == 'map[string]int'
-                        ? int.tryParse(value) ?? 0
-                        : value;
-                    _formValues[field.name] = objectData;
-                    keyController.clear();
-                    valueController.clear();
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppInputTheme.primaryColor,
-                foregroundColor: Colors.white,
+                  if (key.isNotEmpty && value.isNotEmpty) {
+                    setState(() {
+                      objectData[key] = field.format == 'map[string]int'
+                          ? int.tryParse(value) ?? 0
+                          : value;
+                      _formValues[field.name] = objectData;
+                      keyController.clear();
+                      valueController.clear();
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppInputTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: const Text('Добавить'),
               ),
-              child: const Text('Добавить'),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 

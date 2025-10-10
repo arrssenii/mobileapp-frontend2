@@ -1,15 +1,16 @@
-// pages/consultation_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_client.dart';
 import '../../data/models/dynamic_field_model.dart';
+import '../widgets/design_system/input_fields.dart';
 
 class ConsultationScreen extends StatefulWidget {
   final String patientName;
   final String appointmentType;
   final int recordId;
   final int doctorId;
-  final int? emergencyCallId; // Добавляем новый параметр
+  final int? emergencyCallId;
   final bool isReadOnly;
 
   const ConsultationScreen({
@@ -18,7 +19,7 @@ class ConsultationScreen extends StatefulWidget {
     required this.appointmentType,
     required this.recordId,
     required this.doctorId,
-    this.emergencyCallId, // Делаем необязательным
+    this.emergencyCallId,
     this.isReadOnly = false,
   });
 
@@ -35,6 +36,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   String? _documentTypeKey;
   List<Map<String, dynamic>> _medServices = [];
   final _formKey = GlobalKey<FormState>();
+  
   static const Map<String, List<String>> mainFieldsMap = {
     'traumatologist_data': [
       'injury_type',
@@ -61,8 +63,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     'allergologist_data': [
       'complaints',
       'allergen_history',
-      // 'ige_level',
-      // 'immunotherapy',
       'diagnosis',
       'recommendations',
     ],
@@ -106,16 +106,13 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
 
-      // Подготавливаем данные для отправки
       final Map<String, dynamic> specializationUpdates = {};
       for (var field in _fields) {
         specializationUpdates[field.name] = _formValues[field.name];
       }
 
-      // Рассчитываем общую стоимость
       final totalCost = _medServices.fold(0, (sum, service) => sum + (service['price'] as int));
 
-      // Отправляем данные
       await apiClient.updateEmergencyReception(
         receptionId: widget.recordId,
         diagnosis: _formValues['diagnosis'] ?? '',
@@ -153,7 +150,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         response = await apiClient.getEmergencyConsultationData(
           widget.emergencyCallId.toString(),
           widget.recordId.toString(),
-          // widget.emergencyCallId.toString(),
         );
       } else {
         response = await apiClient.getReceptionDetails(
@@ -164,7 +160,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
 
       final data = response['data'] as Map<String, dynamic>? ?? {};
     
-    // Получаем медицинские услуги
       final List<dynamic> medServices = data['med_services'] as List<dynamic>? ?? [];
       final List<Map<String, dynamic>> medServicesList = medServices.map<Map<String, dynamic>>((service) {
         return {
@@ -183,7 +178,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         _fields = fields.map((f) => DynamicField.fromJson(f as Map<String, dynamic>)).toList();
         _medServices = medServicesList;
 
-        // Инициализируем значения формыё
         for (var field in _fields) {
             _formValues[field.name] = field.value ?? field.defaultValue ?? _getDefaultForType(field.type);
         }
@@ -212,7 +206,15 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Консультация: ${widget.patientName}'),
+        title: Text(
+          'Консультация: ${widget.patientName}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppInputTheme.primaryColor,
+        foregroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -242,13 +244,11 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     };
   }
 
-
   Widget _buildMedServicesSection() {
     if (_medServices.isEmpty) {
-      return const SizedBox(); // Не отображать если услуг нет
+      return const SizedBox();
     }
 
-    // Вычисляем итоговую стоимость
     final totalCost = _medServices.fold(0, (sum, service) => sum + (service['price'] as int));
 
     return Column(
@@ -257,21 +257,20 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         const SizedBox(height: 24),
         Row(
           children: [
-            const Icon(Icons.medical_services, color: Colors.blue),
+            const Icon(Icons.medical_services, color: AppInputTheme.primaryColor),
             const SizedBox(width: 8),
             const Text(
               'Медицинские услуги',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue,
+                color: AppInputTheme.primaryColor,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
 
-        // Список услуг
         ..._medServices.map((service) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
@@ -281,7 +280,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(Icons.medical_information, size: 20, color: Colors.grey),
+                      const Icon(Icons.medical_information, size: 20, color: AppInputTheme.textSecondary),
                       const SizedBox(width: 8),
                       Text(
                         service['name'],
@@ -302,10 +301,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
           );
         }).toList(),
 
-        // Разделитель
-        const Divider(height: 30, thickness: 1.5, color: Colors.grey),
+        const Divider(height: 30, thickness: 1.5, color: AppInputTheme.borderColor),
 
-        // Итоговая стоимость
         Padding(
           padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
           child: Row(
@@ -347,9 +344,9 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final additionalFields = split['additional']!;
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20.0),
       child: Form(
-        key: _formKey,  // Вот тут обязательно передай ключ
+        key: _formKey,
         child: Column(
           children: [
             Text(
@@ -361,16 +358,12 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Левая колонка - основные поля
                   Expanded(
                     child: ListView(
                       children: mainFields.map((field) => _buildField(field)).toList(),
                     ),
                   ),
-
                   const SizedBox(width: 20),
-
-                  // Правая колонка - дополнительные поля
                   Expanded(
                     child: ListView(
                       children: additionalFields.map((field) => _buildField(field)).toList(),
@@ -382,20 +375,25 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             _buildMedServicesSection(),
             const SizedBox(height: 20),
             
-            // Кнопка по центру снизу
             if (!widget.isReadOnly)
               SizedBox(
-                width: 250, // фиксированная ширина кнопки
+                width: 250,
                 child: ElevatedButton(
-                  onPressed: _completeConsultation,
+                  onPressed: widget.appointmentType == 'emergency'
+                      ? _completeEmergencyConsultation
+                      : _completeConsultation,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppInputTheme.successColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
                   ),
                   child: const Text(
                     'Завершить консультацию',
-                    style: TextStyle(fontSize: 18),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -405,12 +403,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     );
   }
 
-
-
-
   Widget _buildField(DynamicField field) {
-    // print('isReadOnly: ${widget.isReadOnly}');
-    // print('Field.Name: ${field.name} Field.Type ${field.type}');
     switch (field.type) {
       case 'string':
       case 'text':
@@ -433,216 +426,89 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final currentValue = _formValues[field.name] as bool? ?? false;
 
     if (widget.isReadOnly) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
-        child: Row(
-          children: [
-            Icon(
-              currentValue ? Icons.check_circle : Icons.cancel,
-              color: currentValue ? Colors.green : Colors.grey,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              '${field.description}: ${currentValue ? 'Да' : 'Нет'}',
-              style: const TextStyle(fontSize: 16),
-            ),
-          ],
-        ),
+      return ReadOnlyField(
+        label: field.description,
+        value: currentValue ? 'Да' : 'Нет',
+        isRequired: field.required,
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        children: [
-          Text(field.description, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const Spacer(),
-          Switch(
-            value: currentValue,
-            onChanged: (value) {
-              setState(() {
-                _formValues[field.name] = value;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildTextField(DynamicField field) {
-    final value = (_formValues[field.name] ?? _getDefaultForType(field.type)).toString();
-    // Режим только для чтения - всегда используем текстовое представление
-    if (widget.isReadOnly) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              field.description,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              child: SelectableText(
-                value.isNotEmpty ? value : '—',
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Режим редактирования - используем StatefulBuilder для управления состоянием
-    return StatefulBuilder(
-      builder: (context, setStateField) {
-        final controller = TextEditingController(text: value);
-        
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                field.description,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: controller,
-                maxLines: field.format == 'longtext' ? 5 : 1,
-                maxLength: field.maxLength,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  hintText: field.example != null 
-                      ? 'Пример: ${field.example}'
-                      : 'Введите ${field.description.toLowerCase()}',
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  suffixIcon: controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 20),
-                          onPressed: () {
-                            controller.clear();
-                            _formValues[field.name] = '';
-                            setStateField(() {});
-                          },
-                        )
-                      : null,
-                ),
-                onChanged: (value) {
-                  _formValues[field.name] = value;
-                },
-                validator: (value) {
-                  if (field.required && (value == null || value.isEmpty)) {
-                    return 'Обязательное поле';
-                  }
-                  if (field.minLength != null && (value?.length ?? 0) < field.minLength!) {
-                    return 'Минимум ${field.minLength} символов';
-                  }
-                  return null;
-                },
-              ),
-              if (field.valueFormat != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    field.valueFormat!,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-            ],
-          ),
-        );
+    return ModernSwitchField(
+      label: field.description,
+      value: currentValue,
+      onChanged: (value) {
+        setState(() {
+          _formValues[field.name] = value;
+        });
       },
     );
   }
 
-  
-  Widget _buildNumberField(DynamicField field) {
-    final value = _formValues[field.name]?.toString() ?? '';
-    final controller = TextEditingController(text: value);
+  Widget _buildTextField(DynamicField field) {
+    final value = (_formValues[field.name] ?? _getDefaultForType(field.type)).toString();
 
     if (widget.isReadOnly) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              field.description,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                value.isNotEmpty ? value : '—',
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
-        ),
+      return ReadOnlyField(
+        label: field.description,
+        value: value,
+        isRequired: field.required,
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(field.description, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            maxLength: field.maxLength,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText: field.example != null
-                  ? 'Пример: ${field.example}'
-                  : 'Введите ${field.description.toLowerCase()}',
-              filled: true,
-              fillColor: Colors.grey[50],
-              suffixIcon: controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 20),
-                      onPressed: () {
-                        controller.clear();
-                        _formValues[field.name] = '';
-                      },
-                    )
-                  : null,
-            ),
-            onChanged: (value) {
-              _formValues[field.name] = value;
-            },
-            validator: (value) {
-              if (field.required && (value == null || value.isEmpty)) {
-                return 'Обязательное поле';
-              }
-              if (value != null && int.tryParse(value) == null) {
-                return 'Введите число';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
+    return ModernFormField(
+      label: field.description,
+      controller: TextEditingController(text: value),
+      isRequired: field.required,
+      maxLength: field.maxLength,
+      maxLines: field.format == 'longtext' ? 5 : 1,
+      hintText: field.example != null ? 'Пример: ${field.example}' : null,
+      onChanged: (value) {
+        _formValues[field.name] = value;
+      },
+      validator: (value) {
+        if (field.required && (value == null || value.isEmpty)) {
+          return 'Обязательное поле';
+        }
+        if (field.minLength != null && (value?.length ?? 0) < field.minLength!) {
+          return 'Минимум ${field.minLength} символов';
+        }
+        return null;
+      },
     );
   }
+  
+  Widget _buildNumberField(DynamicField field) {
+    final value = _formValues[field.name]?.toString() ?? '';
 
+    if (widget.isReadOnly) {
+      return ReadOnlyField(
+        label: field.description,
+        value: value,
+        isRequired: field.required,
+      );
+    }
+
+    return ModernFormField(
+      label: field.description,
+      controller: TextEditingController(text: value),
+      isRequired: field.required,
+      keyboardType: TextInputType.number,
+      maxLength: field.maxLength,
+      hintText: field.example != null ? 'Пример: ${field.example}' : null,
+      onChanged: (value) {
+        _formValues[field.name] = value;
+      },
+      validator: (value) {
+        if (field.required && (value == null || value.isEmpty)) {
+          return 'Обязательное поле';
+        }
+        if (value != null && int.tryParse(value) == null) {
+          return 'Введите число';
+        }
+        return null;
+      },
+    );
+  }
 
   Widget _buildArrayField(DynamicField field) {
     final rawItems = _formValues[field.name] ?? [];
@@ -655,14 +521,14 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         children: [
           Text(
             field.description,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: AppInputTheme.labelStyle,
           ),
           const SizedBox(height: 6),
 
           if (items.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Text('Нет элементов', style: TextStyle(color: Colors.grey)),
+              child: Text('Нет элементов', style: TextStyle(color: AppInputTheme.textSecondary)),
             )
           else
             ...items.asMap().entries.map((entry) {
@@ -671,7 +537,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
 
               String displayText;
               if (item is Map) {
-                // превращаем объект в строку типа "allergen: пыльца, reaction: +"
                 displayText = item.entries.map((e) => "${e.key}: ${e.value}").join(", ");
               } else {
                 displayText = item.toString();
@@ -685,7 +550,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                     Expanded(child: Text('• $displayText')),
                     if (!widget.isReadOnly)
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
+                        icon: const Icon(Icons.delete, color: AppInputTheme.errorColor),
                         onPressed: () {
                           setState(() {
                             items.removeAt(index);
@@ -705,10 +570,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     );
   }
 
-
   Widget _buildArrayItemAdder(DynamicField field, List<String> items) {
-    if (widget.isReadOnly) return const SizedBox(); // полностью скрываем
-
     final controller = TextEditingController();
 
     return Row(
@@ -717,11 +579,9 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
           child: TextField(
             controller: controller,
             decoration: InputDecoration(
-              border: const OutlineInputBorder(),
               hintText: 'Новый элемент',
-              filled: true,
-              fillColor: Colors.grey[50],
-            ),
+              isDense: true,
+            ).applyDefaults(AppInputTheme.inputDecorationTheme),
           ),
         ),
         const SizedBox(width: 8),
@@ -735,12 +595,15 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               });
             }
           },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppInputTheme.primaryColor,
+            foregroundColor: Colors.white,
+          ),
           child: const Text('Добавить'),
         ),
       ],
     );
   }
-
 
   Widget _buildObjectField(DynamicField field) {
     final Map<String, dynamic> objectData =
@@ -753,14 +616,14 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         children: [
           Text(
             field.description,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: AppInputTheme.labelStyle,
           ),
           const SizedBox(height: 6),
 
           if (objectData.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Text('Нет элементов', style: TextStyle(color: Colors.grey)),
+              child: Text('Нет элементов', style: TextStyle(color: AppInputTheme.textSecondary)),
             )
           else
             ...objectData.entries.map((entry) {
@@ -775,7 +638,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                     Expanded(child: Text('$key: $value')),
                     if (!widget.isReadOnly)
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
+                        icon: const Icon(Icons.delete, color: AppInputTheme.errorColor),
                         onPressed: () {
                           setState(() {
                             objectData.remove(key);
@@ -796,7 +659,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   Widget _buildObjectItemAdder(DynamicField field, Map<String, dynamic> objectData) {
-    if (widget.isReadOnly) return const SizedBox(); // полностью скрываем
+    if (widget.isReadOnly) return const SizedBox();
 
     final keyController = TextEditingController();
     final valueController = TextEditingController();
@@ -806,7 +669,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       children: [
         Text(
           'Добавить элемент:',
-          style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey[700]),
+          style: TextStyle(fontWeight: FontWeight.w500, color: AppInputTheme.textSecondary),
         ),
         const SizedBox(height: 8),
         Row(
@@ -815,11 +678,9 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               child: TextField(
                 controller: keyController,
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
                   hintText: field.keyFormat ?? 'Ключ',
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
+                  isDense: true,
+                ).applyDefaults(AppInputTheme.inputDecorationTheme),
               ),
             ),
             const SizedBox(width: 8),
@@ -830,11 +691,9 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                     ? TextInputType.number
                     : TextInputType.text,
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
                   hintText: field.valueFormat ?? 'Значение',
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
+                  isDense: true,
+                ).applyDefaults(AppInputTheme.inputDecorationTheme),
               ),
             ),
             const SizedBox(width: 8),
@@ -854,6 +713,10 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                   });
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppInputTheme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Добавить'),
             ),
           ],
@@ -861,7 +724,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       ],
     );
   }
-
 
   Future<void> _completeConsultation() async {
     if (widget.appointmentType == 'emergency') {
@@ -877,7 +739,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       try {
         final apiClient = Provider.of<ApiClient>(context, listen: false);
 
-        // Формируем данные для отправки
         final specializationData = {
           'document_type': _documentTypeKey,
           'fields': _fields.map((field) {
@@ -929,5 +790,5 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         );
       }
     }
-  } 
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../presentation/widgets/design_system/input_fields.dart';
 
 class AppTheme {
   // Основные цвета
@@ -48,12 +49,7 @@ class AppTheme {
       ),
 
       // Поля ввода
-      inputDecorationTheme: const InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
+      inputDecorationTheme: AppInputTheme.inputDecorationTheme,
 
       // Кнопки
       elevatedButtonTheme: ElevatedButtonThemeData(

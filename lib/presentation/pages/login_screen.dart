@@ -6,7 +6,8 @@ import '../../data/models/doctor_model.dart';
 import 'main_screen.dart';
 
 import '../bloc/login_bloc.dart';
-import '../../services/api_client.dart'; // Добавляем импорт ApiClient
+import '../../services/api_client.dart';
+import '../widgets/design_system/input_fields.dart';
 
 class AppVersionWidget extends StatelessWidget {
   const AppVersionWidget({super.key});
@@ -35,7 +36,6 @@ class AppVersionWidget extends StatelessWidget {
   }
 }
 
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -44,53 +44,21 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  late TextEditingController _usernameController;
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: '+7');
-    _usernameController.addListener(_onPhoneChanged);
-  }
-
-  void _onPhoneChanged() {
-    String text = _usernameController.text;
-    if (!text.startsWith('+7')) {
-      // Если пользователь каким-то образом удалил +7, восстанавливаем
-      _usernameController.value = const TextEditingValue(
-        text: '+7',
-        selection: TextSelection.collapsed(offset: 2),
-      );
-      return;
-    }
-
-    // Оставляем только цифры после +7
-    String digitsOnly = text.substring(2).replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.length > 10) {
-      digitsOnly = digitsOnly.substring(0, 10);
-    }
-
-    String newText = '+7$digitsOnly';
-    if (newText != text) {
-      _usernameController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: newText.length),
-      );
-    }
+    // Инициализация телефона происходит в ModernPhoneField
   }
 
   @override
   void dispose() {
-    _usernameController.removeListener(_onPhoneChanged);
-    _usernameController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  bool _isValidPhone(String phone) {
-    final regex = RegExp(r'^\+7\d{10}$');
-    return regex.hasMatch(phone);
   }
 
   Future<void> _loadDoctorData(BuildContext context, int userId) async {
@@ -122,6 +90,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _handleLogin(BuildContext context) {
+    if (_formKey.currentState!.validate()) {
+      final phone = _phoneController.text;
+      final password = _passwordController.text;
+      
+      context.read<LoginBloc>().add(
+        LoginRequested(phone, password),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -147,71 +126,77 @@ class _LoginScreenState extends State<LoginScreen> {
                 }
               },
               builder: (context, state) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Авторизация',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 28, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 40),
-                    TextField(
-                      controller: _usernameController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Телефон',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.phone),
+                return Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Авторизация',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppInputTheme.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextField(
-                      controller: _passwordController,
-                      decoration: const InputDecoration(
-                        labelText: 'Пароль',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock),
+                      const SizedBox(height: 40),
+                      
+                      // Поле телефона
+                      ModernPhoneField(
+                        controller: _phoneController,
+                        isRequired: true,
                       ),
-                      obscureText: true,
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: state is LoginLoading
-                          ? null
-                          : () {
-                              final phone = _usernameController.text;
-                              if (!_isValidPhone(phone)) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Введите корректный номер телефона (+7XXXXXXXXXX)'),
-                                  ),
-                                );
-                                return;
-                              }
-                              context.read<LoginBloc>().add(
-                                    LoginRequested(
-                                      phone,
-                                      _passwordController.text,
-                                    ),
-                                  );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 16),
+                      const SizedBox(height: 24),
+                      
+                      // Поле пароля
+                      ModernFormField(
+                        label: 'Пароль',
+                        controller: _passwordController,
+                        isRequired: true,
+                        obscureText: true,
+                        prefixIcon: const Icon(Icons.lock_outline, color: AppInputTheme.textSecondary),
+                        hintText: 'Введите пароль',
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _handleLogin(context),
                       ),
-                      child: state is LoginLoading
-                          ? const CircularProgressIndicator()
-                          : const Text(
-                              'Вход',
-                              style: TextStyle(fontSize: 18),
-                            ),
-                    ),
-                    const SizedBox(height: 30),
-                    const AppVersionWidget(),
-                  ],
+                      const SizedBox(height: 32),
+                      
+                      // Кнопка входа
+                      ElevatedButton(
+                        onPressed: state is LoginLoading
+                            ? null
+                            : () => _handleLogin(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppInputTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: state is LoginLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Вход',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 30),
+                      const AppVersionWidget(),
+                    ],
+                  ),
                 );
               },
             ),

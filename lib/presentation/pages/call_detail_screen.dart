@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:demo_app/presentation/pages/pdf_sign_screen.dart';
 import 'package:demo_app/presentation/pages/pdf_view_screen.dart';
+import 'package:demo_app/presentation/pages/services_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -455,10 +456,6 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Вызов #${widget.call['id']}'),
-        actions: [
-          if (completedCount == totalPatients)
-            Icon(Icons.check_circle, color: Colors.green),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -621,23 +618,44 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                     ),
                   ),
                   
-                  // Кнопка заключения
+                  // Кнопки действий
                   const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () => _startConsultation(patient),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.secondaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => _startConsultation(patient),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.secondaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: const Text(
+                          'Заключение',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
                       ),
-                      elevation: 2,
-                    ),
-                    child: const Text(
-                      'Заключение',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
+                      const SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: () => _openServicesList(patient),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: const Text(
+                          'Услуги',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -915,6 +933,29 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
         );
       }
     }
+  }
+
+  void _openServicesList(Map<String, dynamic> patient) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ServicesScreen(
+          patientId: patient['patientId'] ?? 0,
+          receptionId: patient['receptionId'] ?? 0,
+          onServicesSelected: (selectedServices) {
+            // Обработка выбранных услуг
+            if (selectedServices.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Выбрано услуг: ${selectedServices.length}'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 
   void _showPatientOptions(Map<String, dynamic> patient) {

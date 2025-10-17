@@ -79,6 +79,31 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           "phone": _controllers['phone']!.text,
           "email": _controllers['email']!.text,
           "address": _controllers['address']!.text,
+          "additional_phone": _controllers['additionalPhone']!.text,
+          "legal_representative": _controllers['legalRepresentative']!.text,
+          "workplace": _controllers['workplace']!.text,
+        },
+        "relative_info": {
+          "status": _controllers['relativeStatus']!.text,
+          "name": _controllers['relativeName']!.text,
+        },
+        "doctor_info": {
+          "name": _controllers['doctorName']!.text,
+          "certificate": _controllers['doctorCertificate']!.text,
+          "start_date": _controllers['doctorStartDate']!.text,
+          "end_date": _controllers['doctorEndDate']!.text,
+          "clinic": _controllers['doctorClinic']!.text,
+        },
+        "policy_info": {
+          "type": _controllers['policyType']!.text,
+          "valid_from": _controllers['policyValidFrom']!.text,
+          "valid_to": _controllers['policyValidTo']!.text,
+          "contractor": _controllers['policyContractor']!.text,
+        },
+        "certificate_info": {
+          "type": _controllers['certificateType']!.text,
+          "start_date": _controllers['certificateStartDate']!.text,
+          "end_date": _controllers['certificateEndDate']!.text,
         },
         "allergy": _controllers['contraindications']!.text
             .split(',')
@@ -147,6 +172,24 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     _controllers['contraindications'] = TextEditingController(
       text: patient.allergies.join(', ')
     );
+    // Добавляем контроллеры для новых полей
+    _controllers['additionalPhone'] = TextEditingController(text: '');
+    _controllers['legalRepresentative'] = TextEditingController(text: '');
+    _controllers['relativeStatus'] = TextEditingController(text: '');
+    _controllers['relativeName'] = TextEditingController(text: '');
+    _controllers['workplace'] = TextEditingController(text: '');
+    _controllers['doctorName'] = TextEditingController(text: '');
+    _controllers['doctorCertificate'] = TextEditingController(text: '');
+    _controllers['doctorStartDate'] = TextEditingController(text: '');
+    _controllers['doctorEndDate'] = TextEditingController(text: '');
+    _controllers['doctorClinic'] = TextEditingController(text: '');
+    _controllers['policyType'] = TextEditingController(text: 'ОМС');
+    _controllers['policyValidFrom'] = TextEditingController(text: '');
+    _controllers['policyValidTo'] = TextEditingController(text: '');
+    _controllers['policyContractor'] = TextEditingController(text: '');
+    _controllers['certificateType'] = TextEditingController(text: '');
+    _controllers['certificateStartDate'] = TextEditingController(text: '');
+    _controllers['certificateEndDate'] = TextEditingController(text: '');
   }
 
   void _resetControllers() {
@@ -199,9 +242,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
             future: _patientFuture,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
-                return Text('Медкарта: ${snapshot.data!.fullName}');
+                return Text('Карточка пациента: ${snapshot.data!.fullName}');
               }
-              return const Text('Медкарта пациента');
+              return const Text('Карточка пациента');
             },
           ),
           backgroundColor: const Color(0xFF5F9EA0),
@@ -238,90 +281,222 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    // Фамилия и Имя
-                    Row(
-                      children: [
-                        Expanded(child: _buildNameField('Фамилия', 'lastName', patient.lastName, true)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildNameField('Имя', 'firstName', patient.firstName, true)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                    // Основные поля для редактирования
+                    if (_isEditing) ...[
+                      // Фамилия и Имя
+                      Row(
+                        children: [
+                          Expanded(child: _buildNameField('Фамилия', 'lastName', patient.lastName, true)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildNameField('Имя', 'firstName', patient.firstName, true)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Отчество и Дата рождения
-                    Row(
-                      children: [
-                        Expanded(child: _buildNameField('Отчество', 'middleName', patient.middleName, false)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildBirthDateField(patient)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      // Отчество и Дата рождения
+                      Row(
+                        children: [
+                          Expanded(child: _buildNameField('Отчество', 'middleName', patient.middleName, false)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildBirthDateField(patient)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Телефон и СНИЛС
-                    Row(
-                      children: [
-                        Expanded(child: _buildContactField('Телефон', 'phone', patient.phone, true, TextInputType.phone)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildDocumentField('СНИЛС', 'snils', _formatSnils(patient.snils), true, [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(11),
-                          _SnilsFormatter(),
-                        ])),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      // Телефон и СНИЛС
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('Телефон', 'phone', patient.phone, true, TextInputType.phone)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildDocumentField('СНИЛС', 'snils', _formatSnils(patient.snils), true, [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(11),
+                            _SnilsFormatter(),
+                          ])),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Тип документа и Пол
-                    Row(
-                      children: [
-                        Expanded(child: _buildDocTypeField()),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildGenderField()),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      // Тип документа и Пол
+                      Row(
+                        children: [
+                          Expanded(child: _buildDocTypeField()),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildGenderField()),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Серия и Номер документа
-                    Row(
-                      children: [
-                        Expanded(child: _buildDocumentField('Серия', 'passportSeries', patient.passportSeries, true, [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(4),
-                        ])),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildDocumentField('Номер', 'passportNumber', patient.passportNumber, true, [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(6),
-                        ])),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      // Серия и Номер документа
+                      Row(
+                        children: [
+                          Expanded(child: _buildDocumentField('Серия', 'passportSeries', patient.passportSeries, true, [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(4),
+                          ])),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildDocumentField('Номер', 'passportNumber', patient.passportNumber, true, [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(6),
+                          ])),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Адрес и Полис
-                    Row(
-                      children: [
-                        Expanded(child: _buildContactField('Адрес', 'address', patient.address, true, null, maxLines: 1)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildDocumentField('Полис ОМС', 'oms', _formatOms(patient.oms), true, [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(16),
-                          _OmsFormatter(),
-                        ])),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      // Адрес и Полис
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('Адрес', 'address', patient.address, true, null, maxLines: 1)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildDocumentField('Полис ОМС', 'oms', _formatOms(patient.oms), true, [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(16),
+                            _OmsFormatter(),
+                          ])),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Email
-                    _buildContactField('Email', 'email', patient.email, false, TextInputType.emailAddress),
-                    const SizedBox(height: 16),
+                      // Email
+                      _buildContactField('Email', 'email', patient.email, false, TextInputType.emailAddress),
+                      const SizedBox(height: 16),
 
-                    // Аллергии
-                    _buildContactField('Аллергии', 'contraindications', patient.allergies.join(', '), false, null, maxLines: 3),
-                    const SizedBox(height: 24),
+                      // Дополнительные поля из HTML
+                      _buildContactField('Дополнительный телефон', 'additionalPhone', '', false, TextInputType.phone),
+                      const SizedBox(height: 16),
 
-                    // Кнопки (только в режиме редактирования)
-                    // if (_isEditing) _buildActionButtons(),
+                      _buildContactField('Законный представитель', 'legalRepresentative', '', false, null),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('Статус родственника', 'relativeStatus', '', false, null)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildContactField('Имя родственника', 'relativeName', '', false, null)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      _buildContactField('Место работы', 'workplace', '', false, null),
+                      const SizedBox(height: 16),
+
+                      // Лечащий врач
+                      const Text('Лечащий врач', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('ФИО врача', 'doctorName', '', false, null)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildContactField('Номер сертификата', 'doctorCertificate', '', false, null)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('Начало прикрепления', 'doctorStartDate', '', false, null)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildContactField('Конец прикрепления', 'doctorEndDate', '', false, null)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildContactField('Клиника', 'doctorClinic', '', false, null),
+                      const SizedBox(height: 16),
+
+                      // Полис
+                      const Text('Полис', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('Вид полиса', 'policyType', 'ОМС', false, null)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildContactField('Срок действия (с)', 'policyValidFrom', '', false, null)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('Срок действия (по)', 'policyValidTo', '', false, null)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildContactField('Контрагент', 'policyContractor', '', false, null)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Сертификат
+                      const Text('Сертификат', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _buildContactField('Вид сертификата', 'certificateType', '', false, null)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildContactField('Дата начала', 'certificateStartDate', '', false, null)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildContactField('Дата окончания', 'certificateEndDate', '', false, null),
+                      const SizedBox(height: 16),
+
+                      // Аллергии
+                      _buildContactField('Аллергии', 'contraindications', patient.allergies.join(', '), false, null, maxLines: 3),
+                      const SizedBox(height: 24),
+                    ] else ...[
+                      // Структурированные поля для режима просмотра
+                      // 1. Представление
+                      _buildSectionField('1. Представление', patient.fullName),
+                      const SizedBox(height: 16),
+
+                      // 2. Возраст
+                      _buildSectionField('2. Возраст', _calculateAge(patient.birthDate)),
+                      const SizedBox(height: 16),
+
+                      // 3. Дата рождения
+                      _buildSectionField('3. Дата рождения', patient.formattedBirthDate),
+                      const SizedBox(height: 16),
+
+                      // 4. Телефон (мобильный)
+                      _buildSectionField('4. Телефон (мобильный)', patient.phone),
+                      const SizedBox(height: 16),
+
+                      // 5. Сотовый телефон (Доп. телефон)
+                      _buildSectionField('5. Сотовый телефон (Доп. телефон)', 'Не указано'),
+                      const SizedBox(height: 16),
+
+                      // 6. Адрес (Фактический)
+                      _buildSectionField('6. Адрес (Фактический)', patient.address),
+                      const SizedBox(height: 16),
+
+                      // 7. Адрес электронной почты
+                      _buildSectionField('7. Адрес электронной почты', patient.email),
+                      const SizedBox(height: 16),
+
+                      // 8. Законный представитель
+                      _buildSectionField('8. Законный представитель', 'Не указано'),
+                      const SizedBox(height: 16),
+
+                      // 9. Родственник
+                      _buildRelativeSection(),
+                      const SizedBox(height: 16),
+
+                      // 10. Место работы
+                      _buildSectionField('10. Место работы', 'Не указано'),
+                      const SizedBox(height: 16),
+
+                      // 11. Лечащий врач
+                      _buildDoctorSection(),
+                      const SizedBox(height: 16),
+
+                      // 12. СНИЛС
+                      _buildSectionField('12. СНИЛС', _formatSnils(patient.snils)),
+                      const SizedBox(height: 16),
+
+                      // 13. Полис
+                      _buildPolicySection(patient),
+                      const SizedBox(height: 16),
+
+                      // 14. Сертификат
+                      _buildCertificateSection(),
+                      const SizedBox(height: 16),
+                    ],
                   ],
                 ),
               ),
@@ -550,6 +725,545 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     } else {
       setState(() => _isEditing = true);
     }
+  }
+
+  // Новые методы для структурированных полей
+  Widget _buildSectionField(String label, String value) {
+    return Container(
+      width: double.infinity,
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1976D2),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value.isEmpty ? 'Не указано' : value,
+                style: const TextStyle(fontSize: 15),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionDivider() {
+    return Container(
+      height: 1,
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      color: Colors.grey[300],
+    );
+  }
+
+  String _calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month ||
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      age--;
+    }
+    return '$age лет';
+  }
+
+  Widget _buildRelativeSection() {
+    return Container(
+      width: double.infinity,
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '9. Родственник',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1976D2),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Статус родственника',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Не указано',
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Наименование',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Не указано',
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoctorSection() {
+    return Container(
+      width: double.infinity,
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '11. Лечащий врач',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1976D2),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFe8f5e9),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF4CAF50), width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Информация о враче',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1976D2),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'ФИО врача',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Номер полиса/сертификата',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Начало прикрепления',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Конец прикрепления',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Клиника',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Не указано',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPolicySection(Patient patient) {
+    return Container(
+      width: double.infinity,
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '13. Полис',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1976D2),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFe8f5e9),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF4CAF50), width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Информация о полисе',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1976D2),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Вид полиса',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'ОМС',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Номер',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatOms(patient.oms).isEmpty ? 'Не указано' : _formatOms(patient.oms),
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Срок действия',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Контрагент',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCertificateSection() {
+    return Container(
+      width: double.infinity,
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '14. Сертификат',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1976D2),
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFe8f5e9),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF4CAF50), width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Информация о сертификате',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1976D2),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Вид сертификата',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Дата начала действия',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Не указано',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Дата окончания действия',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Не указано',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

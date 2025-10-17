@@ -342,9 +342,11 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final split = splitFields(_fields, _documentTypeKey);
     final mainFields = split['main']!;
     final additionalFields = split['additional']!;
+    
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: isMobile ? const EdgeInsets.all(16.0) : const EdgeInsets.all(24.0),
       child: Form(
         key: _formKey,
         child: Column(
@@ -353,7 +355,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             // Заголовок специализации
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16.0),
+              padding: isMobile ? const EdgeInsets.all(12.0) : const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 color: AppInputTheme.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -361,8 +363,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               ),
               child: Text(
                 'Специализация: ${_documentType ?? 'Неизвестно'}',
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(
+                  fontSize: isMobile ? 16 : 18,
                   fontWeight: FontWeight.w700,
                   color: AppInputTheme.primaryColor,
                 ),
@@ -371,31 +373,59 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             ),
             const SizedBox(height: 24),
             
-            // Основной контент в двух колонках
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Левая колонка - основные поля
-                  Expanded(
-                    child: _buildFieldColumn(
-                      title: 'Основные данные',
-                      fields: mainFields,
-                      color: AppInputTheme.primaryColor.withOpacity(0.05),
-                    ),
+            // Основной контент - адаптивная структура
+            if (isMobile)
+              // Мобильная версия - одна колонка
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      if (mainFields.isNotEmpty) ...[
+                        _buildFieldColumn(
+                          title: 'Основные данные',
+                          fields: mainFields,
+                          color: AppInputTheme.primaryColor.withOpacity(0.05),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (additionalFields.isNotEmpty) ...[
+                        _buildFieldColumn(
+                          title: 'Дополнительные данные',
+                          fields: additionalFields,
+                          color: Colors.grey[50],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ],
                   ),
-                  const SizedBox(width: 24),
-                  // Правая колонка - дополнительные поля
-                  Expanded(
-                    child: _buildFieldColumn(
-                      title: 'Дополнительные данные',
-                      fields: additionalFields,
-                      color: Colors.grey[50],
+                ),
+              )
+            else
+              // Десктопная версия - две колонки
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Левая колонка - основные поля
+                    Expanded(
+                      child: _buildFieldColumn(
+                        title: 'Основные данные',
+                        fields: mainFields,
+                        color: AppInputTheme.primaryColor.withOpacity(0.05),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 24),
+                    // Правая колонка - дополнительные поля
+                    Expanded(
+                      child: _buildFieldColumn(
+                        title: 'Дополнительные данные',
+                        fields: additionalFields,
+                        color: Colors.grey[50],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
             
             const SizedBox(height: 24),
             _buildMedServicesSection(),
@@ -405,7 +435,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             if (!widget.isReadOnly)
               Center(
                 child: SizedBox(
-                  width: 280,
+                  width: isMobile ? double.infinity : 280,
                   child: ElevatedButton(
                     onPressed: widget.appointmentType == 'emergency'
                         ? _completeEmergencyConsultation
@@ -413,17 +443,19 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppInputTheme.successColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                      padding: isMobile
+                          ? const EdgeInsets.symmetric(vertical: 16, horizontal: 20)
+                          : const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 3,
                       shadowColor: AppInputTheme.successColor.withOpacity(0.3),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Завершить консультацию',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: isMobile ? 16 : 18,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
                       ),

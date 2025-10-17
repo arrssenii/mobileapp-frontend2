@@ -1,21 +1,11 @@
-import 'dart:typed_data';
-
-import 'package:demo_app/presentation/pages/pdf_sign_screen.dart';
-import 'package:demo_app/presentation/pages/pdf_view_screen.dart';
-import 'package:demo_app/presentation/pages/services_screen.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../services/api_client.dart';
 import 'package:provider/provider.dart';
-import '../../services/pdf_service.dart';
 import 'consultation_screen.dart';
-import 'patient_detail_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/status_chip.dart';
-import 'package:signature/signature.dart';
-import '../../core/theme/theme_config.dart';
+import '../widgets/patient_card_widget.dart';
 
 class CallDetailScreen extends StatefulWidget {
   final Map<String, dynamic> call;
@@ -84,25 +74,6 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
       
-      // Собираем данные пациента
-      final patientData = {
-        'emergencyCallId': widget.emergencyCallId,
-        'firstName': _firstNameController.text,
-        'middleName': _middleNameController.text,
-        'lastName': _lastNameController.text,
-        'birthDate': _birthDate!,
-        'isMale': _isMale!,
-        'phone': _phoneController.text.isNotEmpty ? _phoneController.text : widget.patientPhone,
-        'secondPhone': _secondPhoneController.text,
-        'snils': _snilsController.text,
-        'documentType': _documentType,
-        'documentSeries': _documentSeriesController.text,
-        'documentNumber': _documentNumberController.text,
-        'address': _addressController.text,
-        'omsPolicy': _omsPolicyController.text,
-        'email': _emailController.text,
-        'allergy': _allergyController.text,
-      };
 
       final response = await apiClient.createEmergencyReceptionPatient(
         emergencyCallId: widget.emergencyCallId,
@@ -116,7 +87,7 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
       final patientId = response['data']['patient_id'] as int?;
       final receptionId = response['data']['id'] as int?;
 
-      print("recepID от респона ${receptionId}");
+      // print("recepID от респона ${receptionId}");
 
       if (patientId == null || receptionId == null) {
         throw Exception('Не удалось получить ID созданного пациента или заключения');
@@ -384,8 +355,6 @@ class __AddPatientDialogState extends State<_AddPatientDialog> {
 
 class _CallDetailScreenState extends State<CallDetailScreen> {
   bool _isLoading = true;
-  String? _errorMessage;
-  Map<String, dynamic>? _callDetails;
 
   @override
   void initState() {
@@ -396,7 +365,6 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   Future<void> _loadCallDetails() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -407,15 +375,16 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       final patientsData = response['data']['hits'] as List<dynamic>;
 
       setState(() {
-        _callDetails = response;
         widget.call['patients'] = _transformPatientsData(patientsData);
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Ошибка загрузки деталей вызова: $e';
         _isLoading = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка загрузки деталей вызова: $e')),
+      );
     }
   }
 
@@ -444,9 +413,9 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayCall = _callDetails != null 
-        ? {...widget.call, ..._callDetails!} 
-        : widget.call;
+    // final displayCall = _callDetails != null
+    //     ? {...widget.call, ..._callDetails!}
+    //     : widget.call;
     final patients = widget.call['patients'] as List<dynamic>;
     final completedCount = patients
         .where((patient) => patient['hasConclusion'] == true)
@@ -544,312 +513,18 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   }
 
   Widget _buildPatientCard(Map<String, dynamic> patient) {
-    final fullName =
-        '${patient['lastName'] ?? ''} ${patient['firstName'] ?? ''} ${patient['middleName'] ?? ''}'.trim();
-    final birthDate = patient['birth_date'] != null
-        ? DateFormat('dd.MM.yyyy').format(DateTime.parse(patient['birth_date']))
-        : '';
-    final age = patient['birth_date'] != null
-        ? DateTime.now().year - DateTime.parse(patient['birth_date']).year
-        : '';
-
-    final pdfService = PdfService();
-    final apiClient = Provider.of<ApiClient>(context, listen: false);
-    
-    return DefaultTabController(
-      length: 2,
-      child: CustomCard(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Верхняя часть с информацией о пациенте
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Информация о пациенте
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                fullName,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: patient['hasConclusion']
-                                    ? AppTheme.successColor.withOpacity(0.1)
-                                    : AppTheme.warningColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: patient['hasConclusion'] ? AppTheme.successColor : AppTheme.warningColor,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                patient['hasConclusion'] ? 'Завершено' : 'В процессе',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: patient['hasConclusion'] ? AppTheme.successColor : AppTheme.warningColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        _buildInfoRow('Дата рождения:', birthDate),
-                        _buildInfoRow('Возраст:', '$age лет'),
-                        if (patient['is_male'] != null)
-                          _buildInfoRow('Пол:', patient['is_male'] ? 'Мужской' : 'Женский'),
-                      ],
-                    ),
-                  ),
-                  
-                  // Кнопки действий
-                  const SizedBox(width: 12),
-                  Column(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => _startConsultation(patient),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.secondaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: const Text(
-                          'Заключение',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () => _openServicesList(patient),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: const Text(
-                          'Услуги',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Табы для документов
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TabBar(
-                    labelColor: Colors.black,
-                    unselectedLabelColor: Colors.black54,
-                    indicatorColor: Colors.black,
-                    tabs: const [
-                      Tab(text: "Прививки"),
-                      Tab(text: "Согласие"),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 120,
-                    child: TabBarView(
-                      children: [
-                        // Прививки
-                        Center(
-                          child: Text(
-                            "Информация о прививках отсутствует",
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-
-                        // Согласие
-                        Column(
-                          children: [
-                            const SizedBox(height: 8),
-                            const Text(
-                              "Работа с документами согласия",
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.picture_as_pdf, size: 16),
-                                  label: const Text('Открыть PDF'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.secondaryColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                  ),
-                                  onPressed: () async {
-                                    try {
-                                      final pdfFile = await pdfService.generateFullPatientAgreementWithBackendSignature(
-                                        fullName: fullName,
-                                        address: patient['address'] ?? 'не указано',
-                                        receptionId: patient['receptionId'].toString(),
-                                        apiClient: apiClient,
-                                      );
-                                      Uint8List pdfBytes;
-                                      if (kIsWeb) {
-                                        await pdfService.openPdf(pdfFile);
-                                        pdfBytes = await pdfFile!.readAsBytes();
-                                      } else {
-                                        pdfBytes = await pdfFile!.readAsBytes();
-                                      }
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => PdfViewerScreen(pdfBytes: pdfBytes),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Ошибка генерации PDF: $e')),
-                                      );
-                                    }
-                                  },
-                                ),
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.edit, size: 16),
-                                  label: const Text('Подписать'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).primaryColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                  ),
-                                  onPressed: () async {
-                                    final receptionId = patient['receptionId']?.toString();
-                                    if (receptionId != null) {
-                                      try {
-                                        final signatureBytes = await Navigator.push<Uint8List>(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => PdfSignatureScreen(
-                                              receptionId: receptionId,
-                                            ),
-                                          ),
-                                        );
-                                        if (signatureBytes != null) {
-                                          await apiClient.uploadReceptionSignature(
-                                            receptionId: receptionId,
-                                            signatureBytes: signatureBytes
-                                          );
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Подпись добавлена')),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Ошибка подписи: $e')),
-                                        );
-                                      }
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
+    return PatientCardWidget(
+      patient: patient,
+      emergencyCallId: widget.call['id'],
+      onPatientUpdated: _loadCallDetails,
+      onCallCompleted: _updateCallStatusIfCompleted,
     );
   }
 
 
 
 
-  void _startConsultation(Map<String, dynamic> patient) {
-    final fullName = '${patient['lastName'] ?? ''} ${patient['firstName'] ?? ''} ${patient['middleName'] ?? ''}'.trim();
-    print('Открываем ConsultationScreen с patientId=${patient['id']}, emergencyCallId=${widget.call['id']}');
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ConsultationScreen(
-          patientName: fullName,
-          appointmentType: 'emergency',
-          recordId: patient['receptionId'], 
-          doctorId: Provider.of<ApiClient>(context, listen: false).currentDoctorId ?? 1,
-          emergencyCallId: widget.call['id'], // callId
-        ),
-      ),
-    ).then((result) {
-      if (result == true) {
-        // _loadCallDetails();
-        setState(() {
-        patient['hasConclusion'] = true;
-        });
-        _updateCallStatusIfCompleted();
-      }
-    });
-  }
+
 
   void _addPatient() {
     showDialog(
@@ -871,35 +546,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     );
   }
 
-  void _openConsentDocument(Map<String, dynamic> patient) {
-    final receptionId = patient['receptionId']?.toString(); // <-- используем правильный ключ
-    print('ReceptionId: $receptionId'); // для проверки
-    if (receptionId == null) return;
 
-    // Navigator.push(
-      // context,
-      // MaterialPageRoute(
-        // builder: (context) => PdfViewerScreen(receptionId: receptionId),
-      // ),
-    // );
-  }
-
-  void _checkCallCompletion() {
-    final allCompleted = widget.call['patients']
-        .every((patient) => patient['hasConclusion'] == true);
-    if (allCompleted) {
-      setState(() {
-        widget.call['isCompleted'] = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Вызов завершен!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
 
   void _updateCallStatusIfCompleted() async {
     // await _loadCallDetails();
@@ -935,80 +582,6 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     }
   }
 
-  void _openServicesList(Map<String, dynamic> patient) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ServicesScreen(
-          patientId: patient['patientId'] ?? 0,
-          receptionId: patient['receptionId'] ?? 0,
-          onServicesSelected: (selectedServices) {
-            // Обработка выбранных услуг
-            if (selectedServices.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Выбрано услуг: ${selectedServices.length}'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          },
-        ),
-      ),
-    );
-  }
 
-  void _showPatientOptions(Map<String, dynamic> patient) {
-    final fullName = '${patient['lastName'] ?? ''} ${patient['firstName'] ?? ''} ${patient['middleName'] ?? ''}'.trim();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(fullName),
-        content: const Text('Выберите действие'),
-        actions: [
-          // Оставляем только кнопку для начала обследования (если не завершено)
-          if (!patient['hasConclusion'])
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _openConsentDocument(patient);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4682B4),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Согласие на осмотр'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _startConsultation(patient);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4682B4),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Начать обследование'),
-            ),
-            if (patient['hasConclusion'])
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _startConsultation(patient);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4682B4),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Редактировать заключение'),
-          ),
-          TextButton(
-            child: const Text('Закрыть'),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-    );
-  }
 
 }

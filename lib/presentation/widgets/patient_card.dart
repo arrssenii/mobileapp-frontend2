@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'custom_card.dart';
 import 'action_tile.dart';
+import 'patient_options_dialog.dart';
 
 class PatientCard extends StatelessWidget {
   final Map<String, dynamic> patient;
@@ -128,32 +129,18 @@ class PatientCard extends StatelessWidget {
   void _showOptions(BuildContext context) {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ActionTile(
-              icon: Icons.visibility,
-              title: 'Подробнее',
-              onTap: () {
-                Navigator.pop(dialogContext);
-                if (context.mounted) {
-                  onDetails();
-                }
-              },
-            ),
-            ActionTile(
-              icon: Icons.history,
-              title: 'История болезни',
-              onTap: () {
-                Navigator.pop(dialogContext);
-                if (context.mounted) {
-                  onHistory();
-                }
-              },
-            ),
-          ],
-        ),
+      builder: (dialogContext) => PatientOptionsDialog(
+        patient: patient,
+        onPatientCard: () {
+          if (context.mounted) {
+            onDetails();
+          }
+        },
+        onEmk: () {
+          if (context.mounted) {
+            onHistory();
+          }
+        },
       ),
     );
   }

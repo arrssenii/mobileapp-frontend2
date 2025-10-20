@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/doctor_model.dart';
 
@@ -131,6 +132,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Логотип
+                      SvgPicture.asset(
+                        'lib/core/assets/logo.svg',
+                        height: 80,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 24),
                       const Text(
                         'Авторизация',
                         textAlign: TextAlign.center,
@@ -140,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: AppInputTheme.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 32),
                       
                       // Поле телефона
                       ModernPhoneField(

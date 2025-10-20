@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/status_chip.dart';
 
 class CallCard extends StatelessWidget {
   final Map<String, dynamic> call;
@@ -13,10 +12,7 @@ class CallCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isEmergency = call['emergency'] == true;
     final bool isCompleted = call['isCompleted'] ?? false;
-
-    final String mainStatus = isEmergency ? 'Экстренный' : 'Неотложный';
     final String executionStatus = isCompleted ? 'Завершён' : 'Выполняется';
 
     final patients = call['patients'] as List<dynamic>;
@@ -36,14 +32,10 @@ class CallCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Основной статус и время
+                  // Время вызова
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      StatusChip(
-                        text: mainStatus,
-                        isEmergency: isEmergency,
-                      ),
                       Text(
                         call['time'],
                         style: TextStyle(

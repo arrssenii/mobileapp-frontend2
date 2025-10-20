@@ -438,12 +438,8 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      StatusChip(
-                        text: widget.call['mainStatus'],
-                        isEmergency: widget.call['mainStatus'] == 'ЭКСТРЕННЫЙ',
-                      ),
                       Text(
-                        widget.call['time'],
+                        'Время: ${widget.call['time']}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).primaryColor,
@@ -490,15 +486,16 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
               ),
             ),
 
+            // Кнопка завершения выезда
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.person_add),
-                  label: const Text('Добавить пациента'),
-                  onPressed: _addPatient,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Завершить выезд'),
+                  onPressed: _completeCall,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
+                    backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24, vertical: 12),
@@ -579,6 +576,35 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  void _completeCall() async {
+    try {
+      final apiClient = Provider.of<ApiClient>(context, listen: false);
+      
+      // Сохраняем все данные и завершаем вызов
+      await apiClient.updateEmergencyCallStatus(
+        widget.call['id'].toString(),
+        'completed'
+      );
+      
+      // Закрываем экран и возвращаемся к списку вызовов
+      Navigator.pop(context);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Выезд успешно завершен!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка завершения выезда: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:kvant_medpuls/presentation/pages/pdf_sign_screen.dart';
 import 'package:kvant_medpuls/presentation/pages/pdf_view_screen.dart';
 import 'package:kvant_medpuls/presentation/pages/services_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/patient_detail_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/patient_history_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +13,7 @@ import '../pages/consultation_screen.dart';
 import 'custom_card.dart';
 import '../../core/theme/theme_config.dart';
 import 'patient_options_dialog.dart';
+import '../../data/models/patient_model.dart';
 
 class PatientCardWidget extends StatefulWidget {
   final Map<String, dynamic> patient;
@@ -32,6 +35,14 @@ class PatientCardWidget extends StatefulWidget {
 
 class _PatientCardWidgetState extends State<PatientCardWidget> {
   final PdfService _pdfService = PdfService();
+  Patient? _fullPatientData;
+  bool _isLoadingFullData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFullPatientData();
+  }
 
   void _startConsultation() {
     final fullName = _getFullName();
@@ -91,19 +102,51 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
       builder: (dialogContext) => PatientOptionsDialog(
         patient: _transformPatientData(),
         onPatientCard: () {
-          // TODO: Реализовать переход к карточке пациента
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Переход к карточке пациента')),
-          );
+          _openPatientDetails();
         },
         onEmk: () {
-          // TODO: Реализовать переход к ЭМК
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Переход к ЭМК')),
-          );
+          _openPatientHistory();
         },
       ),
     );
+  }
+
+  void _openPatientDetails() {
+    final patientId = widget.patient['patientId']?.toString();
+    if (patientId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PatientDetailScreen(
+            patientId: patientId,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID пациента не найден')),
+      );
+    }
+  }
+
+  void _openPatientHistory() {
+    final patientId = widget.patient['patientId'];
+    if (patientId != null) {
+      final fullName = _getFullName();
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PatientHistoryScreen(
+            patientId: patientId,
+            patientName: fullName,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID пациента не найден')),
+      );
+    }
   }
 
   Map<String, dynamic> _transformPatientData() {
@@ -120,6 +163,50 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
     return '${widget.patient['lastName'] ?? ''} ${widget.patient['firstName'] ?? ''} ${widget.patient['middleName'] ?? ''}'.trim();
   }
 
+  String _getGender() {
+    return widget.patient['is_male'] == true ? 'Мужской' : 'Женский';
+  }
+
+  String _formatSnils(String snils) {
+    if (snils.isEmpty) return 'Не указано';
+    final digits = snils.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length < 11) return snils;
+    
+    return '${digits.substring(0, 3)}-${digits.substring(3, 6)}-'
+           '${digits.substring(6, 9)} ${digits.substring(9, 11)}';
+  }
+
+  String _formatOms(String oms) {
+    if (oms.isEmpty) return 'Не указано';
+    final digits = oms.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length < 16) return oms;
+    
+    return '${digits.substring(0, 4)} ${digits.substring(4, 8)} '
+           '${digits.substring(8, 12)} ${digits.substring(12, 16)}';
+  }
+
+  Future<void> _loadFullPatientData() async {
+    if (_isLoadingFullData || _fullPatientData != null) return;
+    
+    setState(() {
+      _isLoadingFullData = true;
+    });
+
+    try {
+      final apiClient = Provider.of<ApiClient>(context, listen: false);
+      final patientId = widget.patient['patientId']?.toString();
+      if (patientId != null) {
+        _fullPatientData = await apiClient.getMedCardByPatientId(patientId);
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки полных данных пациента: $e');
+    } finally {
+      setState(() {
+        _isLoadingFullData = false;
+      });
+    }
+  }
+
   String _getBirthDate() {
     return widget.patient['birth_date'] != null
         ? DateFormat('dd.MM.yyyy').format(DateTime.parse(widget.patient['birth_date']))
@@ -130,6 +217,80 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
     return widget.patient['birth_date'] != null
         ? (DateTime.now().year - DateTime.parse(widget.patient['birth_date']).year).toString()
         : '';
+  }
+
+  Widget _buildPatientInfoSection() {
+    if (_isLoadingFullData) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final patientData = _fullPatientData;
+    if (patientData == null) {
+      return Container(); // Не показываем секцию, если данных нет
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Контактная информация
+        if (patientData.phone.isNotEmpty)
+          _buildInfoRow('Телефон', patientData.phone),
+        
+        if (patientData.email.isNotEmpty)
+          _buildInfoRow('Email', patientData.email),
+        
+        // Документы
+        if (patientData.snils.isNotEmpty)
+          _buildInfoRow('СНИЛС', _formatSnils(patientData.snils)),
+        
+        if (patientData.oms.isNotEmpty)
+          _buildInfoRow('Полис ОМС', _formatOms(patientData.oms)),
+        
+        if (patientData.passportFull.isNotEmpty)
+          _buildInfoRow('Паспорт', patientData.passportFull),
+        
+        // Адрес
+        if (patientData.address.isNotEmpty)
+          _buildInfoRow('Адрес', patientData.address),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -183,6 +344,11 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                       ),
                     ],
                   ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // Основные данные пациента
+                  _buildPatientInfoSection(),
                   
                   const SizedBox(height: 16),
                   

@@ -1,11 +1,11 @@
 // pages/patient_history_screen.dart
 import 'dart:developer';
 
-import 'package:demo_app/presentation/pages/consultation_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/consultation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
-import 'package:demo_app/services/api_client.dart';
+import 'package:kvant_medpuls/services/api_client.dart';
 
 class PatientHistoryScreen extends StatefulWidget {
   final int patientId;

@@ -1,8 +1,8 @@
-import 'package:demo_app/presentation/pages/login_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:demo_app/services/api_client.dart'; // Добавлен импорт
-import 'package:demo_app/data/models/appointment_model.dart';
+import 'package:kvant_medpuls/services/api_client.dart'; // Добавлен импорт
+import 'package:kvant_medpuls/data/models/appointment_model.dart';
 import 'patient_detail_screen.dart';
 import 'consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';

@@ -1,5 +1,5 @@
-name: demo_app
-description: "A new Flutter project."
+name: kvant_medpuls
+description: "Квант.МедПульс"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -46,13 +46,13 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/Roboto-Regular.ttf
-    - lib/core/assets/icon.svg
+    - lib/core/assets/icon.png
     - lib/core/assets/logo.svg
 
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "lib/core/assets/icon.svg" 
+  image_path: "lib/core/assets/icon.png"
   adaptive_icon_background: "#5F9EA0"
-  adaptive_icon_foreground: "lib/core/assets/icon.svg" 
+  adaptive_icon_foreground: "lib/core/assets/icon.png"

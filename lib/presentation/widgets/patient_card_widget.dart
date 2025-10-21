@@ -1,6 +1,6 @@
-import 'package:demo_app/presentation/pages/pdf_sign_screen.dart';
-import 'package:demo_app/presentation/pages/pdf_view_screen.dart';
-import 'package:demo_app/presentation/pages/services_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/pdf_sign_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/pdf_view_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/services_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

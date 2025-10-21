@@ -1,5 +1,5 @@
-import 'package:demo_app/presentation/pages/creat_call_screen.dart';
-import 'package:demo_app/presentation/pages/login_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/creat_call_screen.dart';
+import 'package:kvant_medpuls/presentation/pages/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_client.dart';

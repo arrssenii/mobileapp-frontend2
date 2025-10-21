@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:demo_app/data/models/appointment_model.dart'; // Добавлен импорт модели
+import 'package:kvant_medpuls/data/models/appointment_model.dart'; // Добавлен импорт модели
 import 'package:intl/intl.dart';
 
 class AppointmentCard extends StatelessWidget {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'custom_card.dart';
 import 'action_tile.dart';
 import 'patient_options_dialog.dart';
+import '../../core/theme/theme_config.dart';
 
 class PatientCard extends StatelessWidget {
   final Map<String, dynamic> patient;
@@ -76,7 +77,7 @@ class PatientCard extends StatelessWidget {
                 width: 12,
                 height: 12,
                 decoration: const BoxDecoration(
-                  color: Colors.green,
+                  color: AppTheme.successColor,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -99,7 +100,7 @@ class PatientCard extends StatelessWidget {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF8B8B8B)),
+        Icon(icon, size: 20, color: AppTheme.textSecondary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'action_tile.dart';
+import '../../core/theme/theme_config.dart';
 
 class PatientOptionsDialog extends StatelessWidget {
   final Map<String, dynamic> patient;
@@ -46,7 +47,7 @@ class PatientOptionsDialog extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
+                color: AppTheme.backgroundColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -66,7 +67,7 @@ class PatientOptionsDialog extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333),
+                      color: AppTheme.textPrimary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -79,28 +80,28 @@ class PatientOptionsDialog extends StatelessWidget {
                             ? Icons.male
                             : Icons.female,
                         size: 16,
-                        color: const Color(0xFF8B8B8B),
+                        color: AppTheme.textSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         gender,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF8B8B8B),
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(width: 16),
                       const Icon(
                         Icons.calendar_today,
                         size: 16,
-                        color: Color(0xFF8B8B8B),
+                        color: AppTheme.textSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         birthDate,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF8B8B8B),
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                     ],
@@ -117,7 +118,7 @@ class PatientOptionsDialog extends StatelessWidget {
                   ActionTile(
                     icon: Icons.person_outline,
                     title: 'Карточка пациента',
-                    iconColor: const Color(0xFF5F9EA0),
+                    iconColor: AppTheme.primaryColor,
                     onTap: () {
                       Navigator.pop(context);
                       onPatientCard();
@@ -125,12 +126,12 @@ class PatientOptionsDialog extends StatelessWidget {
                   ),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Divider(height: 1, color: Color(0xFFF0F0F0)),
+                    child: Divider(height: 1, color: const Color(0xFFF0F0F0)),
                   ),
                   ActionTile(
                     icon: Icons.medical_services_outlined,
                     title: 'ЭМК',
-                    iconColor: const Color(0xFF4682B4),
+                    iconColor: AppTheme.secondaryColor,
                     onTap: () {
                       Navigator.pop(context);
                       onEmk();
@@ -148,7 +149,7 @@ class PatientOptionsDialog extends StatelessWidget {
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF8B8B8B),
+                    foregroundColor: AppTheme.textSecondary,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

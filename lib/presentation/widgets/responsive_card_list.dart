@@ -3,6 +3,7 @@ import 'appointment_card.dart';
 import 'call_card.dart';
 import 'patient_card.dart';
 import '../../data/models/appointment_model.dart';
+import '../../core/theme/theme_config.dart';
 
 enum CardListType {
   schedule,
@@ -116,7 +117,7 @@ class ResponsiveCardList extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.filter_list, size: 25, color: Colors.white),
+                icon: const Icon(Icons.filter_list, size: 25, color: AppTheme.textLight),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Фильтрация будет реализована позже')),
@@ -134,7 +135,7 @@ class ResponsiveCardList extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.add, size: 25, color: Colors.white),
+                icon: const Icon(Icons.add, size: 25, color: AppTheme.textLight),
                 onPressed: onAdd,
                 tooltip: _getAddButtonTooltip(),
               ),
@@ -152,14 +153,14 @@ class ResponsiveCardList extends StatelessWidget {
           Icon(
             _getEmptyStateIcon(),
             size: 64,
-            color: Colors.grey[400],
+            color: AppTheme.textSecondary,
           ),
           const SizedBox(height: 20),
           Text(
             _getEmptyStateText(),
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: AppTheme.textSecondary,
             ),
           ),
         ],

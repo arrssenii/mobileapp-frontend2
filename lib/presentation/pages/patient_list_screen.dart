@@ -7,6 +7,7 @@ import 'package:kvant_medpuls/presentation/pages/patient_detail_screen.dart';
 import 'package:kvant_medpuls/presentation/pages/patient_history_screen.dart';
 import 'package:kvant_medpuls/presentation/pages/add_patient_screen.dart';
 import '../widgets/responsive_card_list.dart';
+import 'package:kvant_medpuls/core/theme/theme_config.dart';
 
 class PatientListScreen extends StatefulWidget {
   const PatientListScreen({super.key});
@@ -212,12 +213,12 @@ String _buildFullName(Map<String, dynamic> patient) {
       appBar: AppBar(
         title: const Text(
           'Пациенты',
-          style: TextStyle(color: Color(0xFF8B8B8B)),
+          style: TextStyle(color: AppTheme.textSecondary),
           ), // упрощенный заголовок
-        backgroundColor: const Color(0xFFFFFFFF),
+        backgroundColor: Colors.white,
         toolbarHeight: 60, // уменьшенная высота
         leading: IconButton( // ← Кнопка выхода слева
-        icon: const Icon(Icons.logout, color: Color(0xFF8B8B8B)),
+        icon: const Icon(Icons.logout, color: AppTheme.textSecondary),
         tooltip: 'Выйти',
         onPressed: () {
           // Чистим данные и выходим
@@ -230,12 +231,12 @@ String _buildFullName(Map<String, dynamic> patient) {
       ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF8B8B8B)), // Серый цвет
+            icon: const Icon(Icons.refresh, color: AppTheme.textSecondary), // Серый цвет
             onPressed: _refreshPatients,
             tooltip: 'Обновить список',
           ),
           // IconButton(
-          //   icon: const Icon(Icons.add, color: Color(0xFF8B8B8B)), // Серый цвет
+          //   icon: const Icon(Icons.add, color: AppTheme.textSecondary), // Серый цвет
           //   onPressed: _openAddPatientScreen,
           //   tooltip: 'Добавить пациента',
           // ),

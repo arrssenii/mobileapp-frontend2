@@ -8,6 +8,7 @@ import '../../services/websocket_service.dart';
 import './call_detail_screen.dart';
 import '../widgets/responsive_card_list.dart';
 import '../widgets/date_carousel.dart';
+import '../../core/theme/theme_config.dart';
 
 class CallsScreen extends StatefulWidget {
   const CallsScreen({super.key});
@@ -128,9 +129,9 @@ class _CallsScreenState extends State<CallsScreen> {
           children: [
             Text(
               isEmergency ? '🚨 НОВЫЙ ЭКСТРЕННЫЙ ВЫЗОВ' : '📞 НОВЫЙ ВЫЗОВ',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: AppTheme.textLight,
               ),
             ),
             const SizedBox(height: 4),
@@ -138,11 +139,11 @@ class _CallsScreenState extends State<CallsScreen> {
             Text('Телефон: $phone'),
           ],
         ),
-        backgroundColor: isEmergency ? Colors.red : Colors.blue,
+        backgroundColor: isEmergency ? AppTheme.statusEmergency : AppTheme.statusScheduled,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
           label: 'Просмотреть',
-          textColor: Colors.white,
+          textColor: AppTheme.textLight,
           onPressed: () {
             // Перезагружаем список вызовов
             if (mounted) {
@@ -352,13 +353,13 @@ List<Map<String, dynamic>> _getPatientsFromCall(Map<String, dynamic> call) {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFFFFF),
+        backgroundColor: Colors.white,
         title: const Text(
           'Вызовы',
-          style: TextStyle(color: Color(0xFF8B8B8B)),
+          style: TextStyle(color: AppTheme.textSecondary),
         ),
         leading: IconButton( // ← Кнопка выхода слева
-        icon: const Icon(Icons.logout, color: Color(0xFF8B8B8B)),
+        icon: const Icon(Icons.logout, color: AppTheme.textSecondary),
         tooltip: 'Выйти',
         onPressed: () {
           // Чистим данные и выходим
@@ -374,7 +375,7 @@ List<Map<String, dynamic>> _getPatientsFromCall(Map<String, dynamic> call) {
             icon: const Icon(Icons.refresh),
             onPressed: _refreshCalls,
             tooltip: 'Обновить список',
-            color: const Color(0xFF8B8B8B),
+            color: AppTheme.textSecondary,
           ),
         ],
       ),

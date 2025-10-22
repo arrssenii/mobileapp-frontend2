@@ -10,6 +10,7 @@ import '../widgets/date_picker_icon_button.dart';
 import '../widgets/action_tile.dart';
 import '../widgets/date_carousel.dart';
 import '../widgets/responsive_card_list.dart';
+import 'package:kvant_medpuls/core/theme/theme_config.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -158,7 +159,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Ошибка обновления: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
     }
@@ -270,7 +271,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   TextButton(
                     child: const Text('Отмена', 
                       style: TextStyle(
-                        color: Color(0xFF8B8B8B),
+                        color: AppTheme.textSecondary,
                         fontSize: 16,
                       ),
                     ),
@@ -321,7 +322,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Заключение врача сохранено'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppTheme.successColor,
           ),
         );
       }
@@ -332,13 +333,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFFFFF),
+        backgroundColor: Colors.white,
         title: const Text(
           'Расписание приёмов',
-          style: TextStyle(color: Color(0xFF8B8B8B)),
+          style: TextStyle(color: AppTheme.textSecondary),
         ),
         leading: IconButton( // ← Кнопка выхода слева
-        icon: const Icon(Icons.logout, color: Color(0xFF8B8B8B)),
+        icon: const Icon(Icons.logout, color: AppTheme.textSecondary),
         tooltip: 'Выйти',
         onPressed: () {
           // Чистим данные и выходим

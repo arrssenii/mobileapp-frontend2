@@ -14,7 +14,6 @@ import 'domain/repositories/auth_repository.dart';
 import 'data/datasources/auth_remote_data_source.dart';
 import 'data/models/user_model.dart';
 import 'data/repositories/auth_repository_impl.dart';
-import 'data/models/doctor_model.dart';
 
 // Presentation Layer
 import 'presentation/pages/login_screen.dart';
@@ -24,6 +23,7 @@ import 'presentation/bloc/login_bloc.dart';
 // Services
 import 'services/auth_service.dart'; // Добавляем импорт AuthService
 import 'services/api_client.dart';
+import 'services/websocket_service.dart';
 
 // Theme
 import 'core/theme/theme_config.dart';
@@ -41,7 +41,8 @@ void main() async {
   runApp(MyApp(
     apiClient: apiClient,
     authRepository: authRepository,
-    authService: authService
+    authService: authService,
+    webSocketService: WebSocketService(),
   ));
 }
 
@@ -49,12 +50,14 @@ class MyApp extends StatelessWidget {
   final ApiClient apiClient;
   final AuthRepository authRepository;
   final AuthService authService;
+  final WebSocketService webSocketService;
 
   const MyApp({
     super.key,
     required this.apiClient,
     required this.authRepository,
     required this.authService,
+    required this.webSocketService,
   });
 
   @override
@@ -63,6 +66,7 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider.value(value: apiClient),
         Provider.value(value: this.authService),
+        Provider.value(value: this.webSocketService),
         BlocProvider(
           create: (context) => LoginBloc(
             loginUseCase: LoginUseCase(authRepository),
@@ -91,25 +95,12 @@ class MyApp extends StatelessWidget {
             }
             
             if (snapshot.hasData && snapshot.data != null) {
-              // Если данные доктора уже загружены
-              if (apiClient.currentDoctor != null) {
-                return const MainScreen();
-              }
-              
-              // Загружаем данные доктора если есть ID
-              return FutureBuilder<void>(
-                future: _loadDoctorData(context),
-                builder: (context, doctorSnapshot) {
-                  if (doctorSnapshot.connectionState == ConnectionState.waiting) {
-                    return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  return const MainScreen();
-                },
-              );
+              // Проверяем только наличие токена, данные доктора не требуются
+              return const MainScreen();
             }
             
+            // Для тестирования WebSocket можно временно использовать тестовый экран
+            // return const WebSocketTestScreen(userId: '1');
             return LoginScreen();
           },
         ),
@@ -117,21 +108,6 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  Future<void> _loadDoctorData(BuildContext context) async {
-    try {
-      final doctorId = await context.read<AuthService>().getDoctorId();
-      if (doctorId != null) {
-        final doctorData = await context.read<ApiClient>().getDoctorById(doctorId);
-        final doctor = Doctor.fromJson(doctorData); // Преобразование
-        context.read<ApiClient>().setCurrentDoctor(doctor);
-      }
-    } catch (e) {
-      debugPrint('Ошибка загрузки данных доктора: $e');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-      );
-    }
-  }
 }
 
 // main.dart (измененная реализация AuthRemoteDataSourceImpl)
@@ -149,18 +125,30 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       });
       
       // Проверяем структуру ответа
-      if (response.containsKey('token') && response.containsKey('id')) {
+      final responseData = response as Map<String, dynamic>;
+      
+      // Обрабатываем разные форматы ответа
+      Map<String, dynamic> authData;
+      if (responseData.containsKey('data')) {
+        // Формат: {data: {id: 5, token: ...}, message: success, ...}
+        authData = responseData['data'] as Map<String, dynamic>;
+      } else {
+        // Формат: {id: 5, token: ...}
+        authData = responseData;
+      }
+      
+      if (authData.containsKey('token') && authData.containsKey('id')) {
         // Преобразуем ID в int
-        final userId = response['id'] is int 
-            ? response['id'] 
-            : int.tryParse(response['id'].toString());
+        final userId = authData['id'] is int
+            ? authData['id']
+            : int.tryParse(authData['id'].toString());
         
         if (userId == null) {
           throw Exception('Неверный формат ID пользователя');
         }
         
         return UserModel(
-          token: response['token'],
+          token: authData['token'] as String,
           userId: userId,
         );
       } else {

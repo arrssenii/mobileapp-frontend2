@@ -2,6 +2,7 @@ import 'package:kvant_medpuls/presentation/pages/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kvant_medpuls/services/api_client.dart'; // Добавлен импорт
+import 'package:kvant_medpuls/services/auth_service.dart'; // Добавляем импорт AuthService
 import 'package:kvant_medpuls/data/models/appointment_model.dart';
 import 'patient_detail_screen.dart';
 import 'consultation_screen.dart';
@@ -42,21 +43,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Future<void> _loadAppointments() async {
-    // Проверяем инициализацию доктора
-    if (_apiClient.currentDoctor == null) {
-      setState(() {
-        _errorMessage = 'Данные доктора не загружены';
-        _isLoading = false;
-      });
-      return;
-    }
-
-    // Получаем ID доктора из сохраненных данных
-    final doctorId = _apiClient.currentDoctor!.id.toString();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final doctorId = await authService.getDoctorId();
 
     if (doctorId == null) {
       setState(() {
-        _errorMessage = 'ID доктора не установлен';
+        _errorMessage = 'ID доктора не найден';
         _isLoading = false;
       });
       return;

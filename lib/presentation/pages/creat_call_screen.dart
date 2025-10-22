@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_client.dart';
+import '../../services/auth_service.dart'; // Добавляем импорт AuthService
 
 class CreateCallScreen extends StatefulWidget {
   const CreateCallScreen({super.key});
@@ -28,14 +29,15 @@ class _CreateCallScreenState extends State<CreateCallScreen> {
 
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
-      final currentDoctor = apiClient.currentDoctor;
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final doctorId = await authService.getDoctorId();
 
-      if (currentDoctor == null) {
-        throw Exception("Доктор не авторизован");
+      if (doctorId == null) {
+        throw Exception("ID доктора не найден");
       }
 
       await apiClient.createEmergencyCall(
-        doctorId: currentDoctor.id,
+        doctorId: int.parse(doctorId),
         address: _addressController.text,
         phone: _phoneController.text,
         emergency: _isEmergency,

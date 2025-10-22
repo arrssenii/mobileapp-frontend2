@@ -21,6 +21,7 @@ dependencies:
   dio: ^5.4.0
   get_it: ^8.2.0
   shared_preferences: ^2.2.3
+  web_socket_channel: ^3.0.0
   flutter_secure_storage: ^9.2.4
   universal_html: ^2.2.1
   signature: ^6.3.0

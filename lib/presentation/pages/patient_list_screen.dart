@@ -2,6 +2,7 @@ import 'package:kvant_medpuls/presentation/pages/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kvant_medpuls/services/api_client.dart'; // Добавлен импорт
+import 'package:kvant_medpuls/services/auth_service.dart'; // Добавляем импорт AuthService
 import 'package:kvant_medpuls/presentation/pages/patient_detail_screen.dart';
 import 'package:kvant_medpuls/presentation/pages/patient_history_screen.dart';
 import 'package:kvant_medpuls/presentation/pages/add_patient_screen.dart';
@@ -50,22 +51,41 @@ class _PatientListScreenState extends State<PatientListScreen> {
     });
   
     try {
-      if (_apiClient.currentDoctor == null) {
-        throw Exception('Данные доктора не загружены');
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final doctorId = await authService.getDoctorId();
+      
+      if (doctorId == null) {
+        throw Exception('ID доктора не найден');
       }
       
-      final docId = _apiClient.currentDoctor!.id.toString();
-      final patientsData = await _apiClient.getAllPatients(docId);
+      final patientsData = await _apiClient.getAllPatients(doctorId);
       
       setState(() {
         _patients = patientsData.map((patient) {
+          // Обрабатываем разные варианты структуры данных
+          final patientId = patient['PatientID']?.toString() ?? patient['patientID']?.toString() ?? '';
+          final fullName = patient['FullName'] ?? patient['fullName'] ?? patient['full_name'] ?? '';
+          final gender = patient['Gender'] ?? patient['gender'] ?? patient['is_male'] ?? false;
+          final birthDate = patient['BirthDate'] ?? patient['birthDate'] ?? patient['birth_date'] ?? '';
+          
+          // Разбиваем полное имя на компоненты
+          final nameParts = fullName.split(' ');
+          String lastName = '';
+          String firstName = '';
+          String middleName = '';
+          
+          if (nameParts.length >= 1) lastName = nameParts[0];
+          if (nameParts.length >= 2) firstName = nameParts[1];
+          if (nameParts.length >= 3) middleName = nameParts[2];
+          
           return {
-            'id': patient['id'] ?? patient['ID'] ?? 0, // Универсальное получение ID
-            'first_name': patient['first_name'] ?? '',
-            'last_name': patient['last_name'] ?? '',
-            'middle_name': patient['middle_name'] ?? '',
-            'is_male': patient['is_male'] ?? false,
-            'birth_date': patient['birth_date'] ?? '',
+            'id': patientId, // Используем patientId (user1_id) вместо числового ID
+            'patientId': patientId,
+            'firstName': firstName,
+            'lastName': lastName,
+            'middleName': middleName,
+            'is_male': gender == true,
+            'birth_date': birthDate,
           };
         }).toList();
       });
@@ -155,9 +175,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
   }
 
 String _buildFullName(Map<String, dynamic> patient) {
-  final lastName = patient['last_name'] ?? '';
-  final firstName = patient['first_name'] ?? '';
-  final middleName = patient['middle_name'] ?? '';
+  final lastName = patient['lastName'] ?? patient['last_name'] ?? '';
+  final firstName = patient['firstName'] ?? patient['first_name'] ?? '';
+  final middleName = patient['middleName'] ?? patient['middle_name'] ?? '';
   return '$lastName $firstName $middleName'.trim();
 }
 

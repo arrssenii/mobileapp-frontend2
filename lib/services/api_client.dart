@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../data/models/patient_model.dart';
 import '../data/models/doctor_model.dart';
 import 'package:http_parser/http_parser.dart';
 
@@ -15,8 +14,8 @@ class ApiClient {
   Doctor? _currentDoctor;
   final AuthService _authService;
 
-  // final String baseUrl = 'http://192.168.29.112:65321/api/v1'; // новая 
-  final String baseUrl = 'https://devapp2.kvant-cloud.ru/api/v1'; // новая с сертификатом
+  final String baseUrl = 'http://192.168.29.112:65323/api/v1'; // новая 
+  // final String baseUrl = 'https://devapp2.kvant-cloud.ru/api/v1'; // новая с сертификатом
   // final String baseUrl = 'http://192.168.30.139:8080/api/v1'; // localhost
   
 
@@ -277,10 +276,11 @@ class ApiClient {
       final doctorId = await _authService.getDoctorId();
       if (doctorId != null) {
         try {
-          // Загружаем полные данные доктора
-          final doctorData = await getDoctorById(doctorId);
-          _currentDoctor = Doctor.fromJson(doctorData);
-          debugPrint('🔄 Данные доктора загружены из хранилища: ${_currentDoctor!.fullTitle}');
+          // TODO: Загружаем полные данные доктора когда будет готов API
+          // final doctorData = await getDoctorById(doctorId);
+          // _currentDoctor = Doctor.fromJson(doctorData);
+          // debugPrint('🔄 Данные доктора загружены из хранилища: ${_currentDoctor!.fullTitle}');
+          debugPrint('🔄 ID доктора загружен из хранилища: $doctorId');
         } catch (e) {
           debugPrint('⚠️ Ошибка загрузки данных доктора: $e');
         }
@@ -317,25 +317,39 @@ class ApiClient {
       final response = await _dio.post('/auth/', data: credentials);
       print('Auth URL: ${response.realUri}');
       if (response.statusCode == 200) {
+        // Проверяем структуру ответа
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // Обрабатываем разные форматы ответа
+        Map<String, dynamic> authData;
+        if (responseData.containsKey('data')) {
+          // Формат: {data: {id: 5, token: ...}, message: success, ...}
+          authData = responseData['data'] as Map<String, dynamic>;
+        } else {
+          // Формат: {id: 5, token: ...}
+          authData = responseData;
+        }
+        
         // Сохраняем токен
-        if (response.data['token'] != null) {
-          _authToken = response.data['token'];
+        if (authData['token'] != null) {
+          _authToken = authData['token'] as String;
           await _authService.saveToken(_authToken!);
           _dio.options.headers['Authorization'] = 'Bearer $_authToken';
         }
         
         // Сохраняем ID доктора
-        if (response.data['id'] != null) {
-          final doctorId = response.data['id'].toString();
+        if (authData['id'] != null) {
+          final doctorId = authData['id'].toString();
           await _authService.saveDoctorId(doctorId);
           
-          // Загружаем полные данные доктора
-          final doctorData = await getDoctorById(doctorId);
-          _currentDoctor = Doctor.fromJson(doctorData); // Используем модель Doctor
-          debugPrint('🔑 Доктор авторизован: ${_currentDoctor!.fullTitle}');
+          // TODO: Загружаем полные данные доктора когда будет готов API
+          // final doctorData = await getDoctorById(doctorId);
+          // _currentDoctor = Doctor.fromJson(doctorData); // Используем модель Doctor
+          // debugPrint('🔑 Доктор авторизован: ${_currentDoctor!.fullTitle}');
+          debugPrint('🔑 Доктор авторизован: ID=$doctorId');
         }
         
-        return response.data;
+        return responseData;
       } else {
         // Формируем детализированное сообщение об ошибке
         final errorDetails = {
@@ -443,34 +457,35 @@ class ApiClient {
   ''';
   }
 
-  Future<Map<String, dynamic>> getDoctorById(String docId) async {
-    return _handleApiCall(
-      () async {
-        final response = await _dio.get('/doctors/$docId');
-
-        if (response.statusCode != 200) {
-          throw ApiError(
-            statusCode: response.statusCode,
-            message: 'Ошибка сервера: ${response.statusCode}',
-            rawError: response.data,
-          );
-        }
-
-        // Проверяем наличие данных
-        if (response.data == null || 
-            response.data is! Map<String, dynamic> || 
-            response.data['data'] == null) {
-          throw ApiError(
-            message: 'Неверный формат ответа',
-            rawError: response.data,
-          );
-        }
-
-        return response.data['data'] as Map<String, dynamic>;
-      },
-      errorMessage: 'Ошибка получения данных доктора',
-    );
-  }
+  // TODO: Включить когда будет готов API для получения данных доктора
+  // Future<Map<String, dynamic>> getDoctorById(String docId) async {
+  //   return _handleApiCall(
+  //     () async {
+  //       final response = await _dio.get('/doctors/$docId');
+  //
+  //       if (response.statusCode != 200) {
+  //         throw ApiError(
+  //           statusCode: response.statusCode,
+  //           message: 'Ошибка сервера: ${response.statusCode}',
+  //           rawError: response.data,
+  //         );
+  //       }
+  //
+  //       // Проверяем наличие данных
+  //       if (response.data == null ||
+  //           response.data is! Map<String, dynamic> ||
+  //           response.data['data'] == null) {
+  //         throw ApiError(
+  //           message: 'Неверный формат ответа',
+  //           rawError: response.data,
+  //         );
+  //       }
+  //
+  //       return response.data['data'] as Map<String, dynamic>;
+  //     },
+  //     errorMessage: 'Ошибка получения данных доктора',
+  //   );
+  // }
 
   Doctor? get currentDoctor => _currentDoctor;
   int? get currentDoctorId => _currentDoctor?.id;
@@ -502,8 +517,27 @@ class ApiClient {
     return _handleApiCall(
       () async {
         final response = await _dio.get('/patients');
-        // Достаем пациентов из data->hits
-        return response.data['data']['hits'] as List<dynamic>;
+        
+        // Обрабатываем структуру ответа из Swagger
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // Проверяем разные варианты ключей
+        if (responseData.containsKey('data')) {
+          final data = responseData['data'] as Map<String, dynamic>;
+          if (data.containsKey('Patient')) {
+            return data['Patient'] as List<dynamic>;
+          } else if (data.containsKey('patient')) {
+            return data['patient'] as List<dynamic>;
+          }
+        } else if (responseData.containsKey('Patient')) {
+          return responseData['Patient'] as List<dynamic>;
+        } else if (responseData.containsKey('patient')) {
+          return responseData['patient'] as List<dynamic>;
+        }
+        
+        // Если нет ожидаемых ключей, возвращаем пустой список
+        debugPrint('⚠️ Неизвестная структура ответа пациентов: ${responseData.keys}');
+        return [];
       },
       errorMessage: 'Ошибка загрузки пациентов',
     );
@@ -511,7 +545,17 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getPatientById(String patId) async {
     return _handleApiCall(
-      () => _dio.get('/patients/$patId').then((response) => response.data as Map<String, dynamic>),
+      () async {
+        final response = await _dio.get('/patients/$patId');
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // Обрабатываем структуру ответа с data
+        if (responseData.containsKey('data')) {
+          return responseData['data'] as Map<String, dynamic>;
+        }
+        
+        return responseData;
+      },
       errorMessage: 'Ошибка получения данных пациента',
     );
   }
@@ -547,37 +591,67 @@ class ApiClient {
   Future<Map<String, dynamic>> getPatientReceptionsHistory(String patientId) async {
     return _handleApiCall(
       () async {
-        final response = await _dio.get('/hospital/receptions/patients/$patientId');
-
-        // Проверяем статус ответа
-        if (response.statusCode != 200) {
-          throw ApiError(
-            statusCode: response.statusCode,
-            message: 'Ошибка сервера: ${response.statusCode}',
-            rawError: response.data,
+        try {
+          final response = await _dio.get(
+            '/hospital/receptions/patients/$patientId',
+            options: Options(validateStatus: (status) => status != null && status < 500),
           );
-        }
 
-        // Проверяем структуру ответа
-        if (response.data is! Map<String, dynamic> || 
-            response.data['data'] == null ||
-            response.data['data']['hits'] == null) {
-          throw ApiError(
-            message: 'Некорректный формат ответа сервера',
-            rawError: response.data,
-          );
-        }
+          if (response.statusCode == 404) {
+            // Если эндпоинт не найден, возвращаем пустую структуру
+            debugPrint('⚠️ Эндпоинт истории приёмов пациента не найден (404), возвращаем пустые данные');
+            return {
+              'data': {
+                'hits': [],
+                'total': 0,
+                'page': 1,
+                'pages': 0,
+              }
+            };
+          }
 
-        // Возвращаем ВЕСЬ объект ответа, а не только hits
-        return response.data as Map<String, dynamic>;
+          // Проверяем статус ответа
+          if (response.statusCode != 200) {
+            throw ApiError(
+              statusCode: response.statusCode,
+              message: 'Ошибка сервера: ${response.statusCode}',
+              rawError: response.data,
+            );
+          }
+
+          // Проверяем структуру ответа
+          if (response.data is! Map<String, dynamic> ||
+              response.data['data'] == null) {
+            throw ApiError(
+              message: 'Некорректный формат ответа сервера',
+              rawError: response.data,
+            );
+          }
+
+          // Возвращаем ВЕСЬ объект ответа, а не только hits
+          return response.data as Map<String, dynamic>;
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 404) {
+            // Если эндпоинт не найден, возвращаем пустую структуру
+            debugPrint('⚠️ Эндпоинт истории приёмов пациента не найден (404), возвращаем пустые данные');
+            return {
+              'data': {
+                'hits': [],
+                'total': 0,
+                'page': 1,
+                'pages': 0,
+              }
+            };
+          }
+          rethrow;
+        }
       },
       errorMessage: 'Ошибка загрузки истории приёмов пациента',
     );
   }
 
   // Медкарты
-  // services/api_client.dart
-  Future<Patient> getMedCardByPatientId(String patId) async {
+  Future<Map<String, dynamic>> getMedCardByPatientId(String patId) async {
     return _handleApiCall(
       () async {
         final response = await _dio.get('/medcard/$patId');
@@ -590,7 +664,13 @@ class ApiClient {
           );
         }
         
-        return Patient.fromMedCardJson(response.data);
+        // Обрабатываем структуру ответа с data
+        final responseData = response.data as Map<String, dynamic>;
+        if (responseData.containsKey('data')) {
+          return responseData['data'] as Map<String, dynamic>;
+        }
+        
+        return responseData;
       },
       errorMessage: 'Ошибка загрузки медкарты',
     );
@@ -622,16 +702,54 @@ class ApiClient {
     final formattedDate = _formatDate(date);
     return _handleApiCall(
       () async {
-        final response = await _dio.get(
-          '/hospital/receptions/$docId',
-          queryParameters: {
-            'filter': 'date.eq.$formattedDate',
-            'page': page,
-          },
-        );
-        
-        // Возвращаем ВЕСЬ объект ответа
-        return response.data as Map<String, dynamic>;
+        try {
+          final response = await _dio.get(
+            '/hospital/receptions/$docId',
+            queryParameters: {
+              'filter': 'date.eq.$formattedDate',
+              'page': page,
+            },
+            options: Options(validateStatus: (status) => status != null && status < 500),
+          );
+          
+          if (response.statusCode == 404) {
+            // Если эндпоинт не найден, возвращаем пустую структуру
+            debugPrint('⚠️ Эндпоинт приёмов в стационаре не найден (404), возвращаем пустые данные');
+            return {
+              'data': {
+                'hits': [],
+                'total': 0,
+                'page': page,
+                'pages': 0,
+              }
+            };
+          }
+          
+          if (response.statusCode != 200) {
+            throw ApiError(
+              statusCode: response.statusCode,
+              message: 'Ошибка сервера: ${response.statusCode}',
+              rawError: response.data,
+            );
+          }
+          
+          // Возвращаем ВЕСЬ объект ответа
+          return response.data as Map<String, dynamic>;
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 404) {
+            // Если эндпоинт не найден, возвращаем пустую структуру
+            debugPrint('⚠️ Эндпоинт приёмов в стационаре не найден (404), возвращаем пустые данные');
+            return {
+              'data': {
+                'hits': [],
+                'total': 0,
+                'page': page,
+                'pages': 0,
+              }
+            };
+          }
+          rethrow;
+        }
       },
       errorMessage: 'Ошибка загрузки приёмов в стационаре',
     );
@@ -817,14 +935,49 @@ Future<Map<String, dynamic>> createEmergencyReception(Map<String, dynamic> data)
     final formattedDate = _formatDate(date);
     return _handleApiCall(
       () async {
-        final response = await _dio.get(
-          '/emergency/$docId',
-          queryParameters: {
-            'date': formattedDate,
-            'page': page,
-          },
-        );
-        return response.data as Map<String, dynamic>;
+        try {
+          final response = await _dio.get(
+            '/emergency/$docId',
+            queryParameters: {
+              'date': formattedDate,
+              'page': page,
+            },
+            options: Options(validateStatus: (status) => status != null && status < 500),
+          );
+          
+          if (response.statusCode == 404) {
+            // Если эндпоинт не найден, возвращаем пустую структуру
+            debugPrint('⚠️ Эндпоинт вызовов СМП не найден (404), возвращаем пустые данные');
+            return {
+              'hits': [],
+              'total': 0,
+              'page': page,
+              'pages': 0,
+            };
+          }
+          
+          if (response.statusCode != 200) {
+            throw ApiError(
+              statusCode: response.statusCode,
+              message: 'Ошибка сервера: ${response.statusCode}',
+              rawError: response.data,
+            );
+          }
+          
+          return response.data as Map<String, dynamic>;
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 404) {
+            // Если эндпоинт не найден, возвращаем пустую структуру
+            debugPrint('⚠️ Эндпоинт вызовов СМП не найден (404), возвращаем пустые данные');
+            return {
+              'hits': [],
+              'total': 0,
+              'page': page,
+              'pages': 0,
+            };
+          }
+          rethrow;
+        }
       },
       errorMessage: 'Ошибка загрузки звонков СМП',
     );

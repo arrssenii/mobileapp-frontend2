@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:kvant_medpuls/presentation/pages/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_client.dart';
+import '../../services/auth_service.dart'; // Добавляем импорт AuthService
+import '../../services/websocket_service.dart';
 import './call_detail_screen.dart';
 import '../widgets/responsive_card_list.dart';
 import '../widgets/date_carousel.dart';
@@ -24,10 +27,131 @@ class _CallsScreenState extends State<CallsScreen> {
   void initState() {
     super.initState();
     _loadCalls();
+    _setupWebSocketListener();
   }
 
   Future<void> _refreshCalls() async {
     await _loadCalls();
+  }
+
+  void _setupWebSocketListener() {
+    final webSocketService = Provider.of<WebSocketService>(context, listen: false);
+    
+    webSocketService.messageStream.listen((message) {
+      _handleWebSocketMessage(message);
+    });
+  }
+
+  void _handleWebSocketMessage(dynamic message) {
+    try {
+      final jsonData = jsonDecode(message);
+      final type = jsonData['type']?.toString();
+      final data = jsonData['data'];
+      
+      switch (type) {
+        case 'new_call':
+          debugPrint('🚨 Получен новый вызов через WebSocket: $data');
+          _handleNewCall(data);
+          break;
+        case 'call_status_update':
+          debugPrint('🔄 Обновление статуса вызова через WebSocket: $data');
+          _handleCallStatusUpdate(data);
+          break;
+        default:
+          debugPrint('📢 Получено уведомление через WebSocket: $jsonData');
+      }
+    } catch (e) {
+      debugPrint('❌ Ошибка обработки WebSocket сообщения: $e');
+    }
+  }
+
+  void _handleNewCall(Map<String, dynamic> callData) {
+    // Добавляем новый вызов в список
+    final newCall = _transformWebSocketCall(callData);
+    
+    setState(() {
+      _calls.insert(0, newCall);
+      _filterCallsByDate();
+    });
+
+    // Показываем уведомление
+    _showNewCallNotification(newCall);
+  }
+
+  void _handleCallStatusUpdate(Map<String, dynamic> updateData) {
+    final callId = updateData['call_id'];
+    final newStatus = updateData['status'];
+    
+    setState(() {
+      final callIndex = _calls.indexWhere((call) => call['id'] == callId);
+      if (callIndex != -1) {
+        _calls[callIndex]['executionStatus'] = newStatus;
+        _calls[callIndex]['isCompleted'] = newStatus == 'Завершён';
+      }
+      
+      final filteredIndex = _filteredCalls.indexWhere((call) => call['id'] == callId);
+      if (filteredIndex != -1) {
+        _filteredCalls[filteredIndex]['executionStatus'] = newStatus;
+        _filteredCalls[filteredIndex]['isCompleted'] = newStatus == 'Завершён';
+      }
+    });
+  }
+
+  Map<String, dynamic> _transformWebSocketCall(Map<String, dynamic> callData) {
+    final createdAt = DateTime.parse(callData['created_at']).toLocal();
+    final timeStr = '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+
+    return {
+      'id': callData['id'],
+      'date': createdAt,
+      'address': callData['address'] ?? 'Адрес не указан',
+      'phone': callData['phone'] ?? 'Телефон не указан',
+      'emergency': callData['emergency'] ?? false,
+      'mainStatus': callData['emergency'] == true ? 'ЭКСТРЕННЫЙ' : 'НЕОТЛОЖНЫЙ',
+      'executionStatus': 'Выполняется',
+      'time': timeStr,
+      'patients': <Map<String, dynamic>>[],
+      'isCompleted': false,
+    };
+  }
+
+  void _showNewCallNotification(Map<String, dynamic> call) {
+    final address = call['address'];
+    final phone = call['phone'];
+    final isEmergency = call['emergency'] == true;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isEmergency ? '🚨 НОВЫЙ ЭКСТРЕННЫЙ ВЫЗОВ' : '📞 НОВЫЙ ВЫЗОВ',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text('Адрес: $address'),
+            Text('Телефон: $phone'),
+          ],
+        ),
+        backgroundColor: isEmergency ? Colors.red : Colors.blue,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Просмотреть',
+          textColor: Colors.white,
+          onPressed: () {
+            // Перезагружаем список вызовов
+            if (mounted) {
+              _refreshCalls();
+            }
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _loadCalls() async {
@@ -38,17 +162,16 @@ class _CallsScreenState extends State<CallsScreen> {
 
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
-      final currentDoctor = apiClient.currentDoctor;
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final doctorId = await authService.getDoctorId();
 
-      if (currentDoctor == null) {
-        throw Exception('Доктор не авторизован');
+      if (doctorId == null) {
+        throw Exception('ID доктора не найден');
       }
-
-      final docId = currentDoctor.id.toString();
 
       // Получаем список вызовов по дате и доктору
       final callsResponse = await apiClient.getEmergencyCallsByDoctorAndDate(
-        docId,
+        doctorId,
         date: _selectedDate,
       );
 

@@ -7,13 +7,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_client.dart';
+import '../../services/auth_service.dart'; // Добавляем импорт AuthService
 import 'package:provider/provider.dart';
 import '../../services/pdf_service.dart';
 import '../pages/consultation_screen.dart';
 import 'custom_card.dart';
 import '../../core/theme/theme_config.dart';
 import 'patient_options_dialog.dart';
-import '../../data/models/patient_model.dart';
+import '../../data/models/patient_api_model.dart';
+import '../../data/models/medical_card_model.dart';
 
 class PatientCardWidget extends StatefulWidget {
   final Map<String, dynamic> patient;
@@ -35,7 +37,7 @@ class PatientCardWidget extends StatefulWidget {
 
 class _PatientCardWidgetState extends State<PatientCardWidget> {
   final PdfService _pdfService = PdfService();
-  Patient? _fullPatientData;
+  Map<String, dynamic>? _fullPatientData;
   bool _isLoadingFullData = false;
 
   @override
@@ -44,9 +46,11 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
     _loadFullPatientData();
   }
 
-  void _startConsultation() {
+  void _startConsultation() async {
     final fullName = _getFullName();
     final apiClient = Provider.of<ApiClient>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final doctorId = await authService.getDoctorId();
     
     Navigator.push(
       context,
@@ -54,8 +58,8 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
         builder: (context) => ConsultationScreen(
           patientName: fullName,
           appointmentType: 'emergency',
-          recordId: widget.patient['receptionId'], 
-          doctorId: apiClient.currentDoctorId ?? 1,
+          recordId: widget.patient['receptionId'],
+          doctorId: int.parse(doctorId ?? '1'),
           emergencyCallId: widget.emergencyCallId,
         ),
       ),
@@ -234,30 +238,45 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
       return Container(); // Не показываем секцию, если данных нет
     }
 
+    final List<Widget> infoRows = [];
+
+    // Контактная информация
+    final phone = patientData['additionalPhone']?.toString() ?? '';
+    if (phone.isNotEmpty) {
+      infoRows.add(_buildInfoRow('Телефон', phone));
+    }
+    
+    final email = patientData['email']?.toString() ?? '';
+    if (email.isNotEmpty) {
+      infoRows.add(_buildInfoRow('Email', email));
+    }
+    
+    // Документы
+    final snils = patientData['snils']?.toString() ?? '';
+    if (snils.isNotEmpty) {
+      infoRows.add(_buildInfoRow('СНИЛС', _formatSnils(snils)));
+    }
+    
+    final oms = patientData['policy']?['number']?.toString() ?? '';
+    if (oms.isNotEmpty) {
+      infoRows.add(_buildInfoRow('Полис ОМС', _formatOms(oms)));
+    }
+    
+    final passportSeries = patientData['passport']?['series']?.toString() ?? '';
+    if (passportSeries.isNotEmpty) {
+      final passportNumber = patientData['passport']?['number']?.toString() ?? '';
+      infoRows.add(_buildInfoRow('Паспорт', '$passportSeries $passportNumber'));
+    }
+    
+    // Адрес
+    final address = patientData['address']?.toString() ?? '';
+    if (address.isNotEmpty) {
+      infoRows.add(_buildInfoRow('Адрес', address));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Контактная информация
-        if (patientData.phone.isNotEmpty)
-          _buildInfoRow('Телефон', patientData.phone),
-        
-        if (patientData.email.isNotEmpty)
-          _buildInfoRow('Email', patientData.email),
-        
-        // Документы
-        if (patientData.snils.isNotEmpty)
-          _buildInfoRow('СНИЛС', _formatSnils(patientData.snils)),
-        
-        if (patientData.oms.isNotEmpty)
-          _buildInfoRow('Полис ОМС', _formatOms(patientData.oms)),
-        
-        if (patientData.passportFull.isNotEmpty)
-          _buildInfoRow('Паспорт', patientData.passportFull),
-        
-        // Адрес
-        if (patientData.address.isNotEmpty)
-          _buildInfoRow('Адрес', patientData.address),
-      ],
+      children: infoRows,
     );
   }
 

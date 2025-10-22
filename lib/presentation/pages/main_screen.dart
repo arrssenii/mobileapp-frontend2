@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'schedule_screen.dart';
 import 'patient_list_screen.dart';
 import 'calls_screen.dart';
+import '../../services/auth_service.dart';
+import '../../services/websocket_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -21,10 +24,35 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // Принудительно запрашиваем обновление состояния
+    // Подключаемся к вебсокету после инициализации
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {});
+      _connectWebSocket();
     });
+  }
+
+  Future<void> _connectWebSocket() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final webSocketService = Provider.of<WebSocketService>(context, listen: false);
+      
+      final doctorId = await authService.getDoctorId();
+      if (doctorId != null) {
+        await webSocketService.connect(doctorId);
+        debugPrint('✅ WebSocket подключен для доктора: $doctorId');
+      } else {
+        debugPrint('⚠️ ID доктора не найден, WebSocket не подключен');
+      }
+    } catch (e) {
+      debugPrint('❌ Ошибка подключения WebSocket: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    // Отключаем вебсокет при закрытии приложения
+    final webSocketService = Provider.of<WebSocketService>(context, listen: false);
+    webSocketService.disconnect();
+    super.dispose();
   }
 
   @override

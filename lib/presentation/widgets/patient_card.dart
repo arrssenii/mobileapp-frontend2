@@ -56,8 +56,8 @@ class PatientCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   _buildInfoRow(
-                    patient['is_male'] == true ? Icons.male : Icons.female,
-                    patient['is_male'] == true ? 'Мужчина' : 'Женщина',
+                    (patient['is_male'] == true || patient['gender'] == true) ? Icons.male : Icons.female,
+                    (patient['is_male'] == true || patient['gender'] == true) ? 'Мужчина' : 'Женщина',
                   ),
                   const SizedBox(height: 8),
                   _buildInfoRow(
@@ -87,9 +87,9 @@ class PatientCard extends StatelessWidget {
   }
 
   String _buildFullName() {
-    final lastName = patient['last_name'] ?? '';
-    final firstName = patient['first_name'] ?? '';
-    final middleName = patient['middle_name'] ?? '';
+    final lastName = patient['lastName'] ?? patient['last_name'] ?? '';
+    final firstName = patient['firstName'] ?? patient['first_name'] ?? '';
+    final middleName = patient['middleName'] ?? patient['middle_name'] ?? '';
 
     final parts = [lastName, firstName, middleName].where((s) => s.isNotEmpty);
     if (parts.isEmpty) return 'Неизвестный пациент';

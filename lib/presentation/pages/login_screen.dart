@@ -65,23 +65,25 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loadDoctorData(BuildContext context, int userId) async {
     try {
       final apiClient = Provider.of<ApiClient>(context, listen: false);
-      final doctorData = await apiClient.getDoctorById(userId.toString());
-
-      if (doctorData['id'] == null) {
-        throw Exception('Сервер не вернул ID доктора');
-      }
-
-      final responseId = doctorData['id'] is int
-          ? doctorData['id']
-          : int.tryParse(doctorData['id'].toString());
-
-      if (responseId == null || responseId != userId) {
-        throw Exception(
-            'ID доктора в ответе ($responseId) не соответствует запрошенному ($userId)');
-      }
-
-      final doctor = Doctor.fromJson(doctorData);
-      apiClient.setCurrentDoctor(doctor);
+      // TODO: Загружаем данные доктора когда будет готов API
+      // final doctorData = await apiClient.getDoctorById(userId.toString());
+      //
+      // if (doctorData['id'] == null) {
+      //   throw Exception('Сервер не вернул ID доктора');
+      // }
+      //
+      // final responseId = doctorData['id'] is int
+      //     ? doctorData['id']
+      //     : int.tryParse(doctorData['id'].toString());
+      //
+      // if (responseId == null || responseId != userId) {
+      //   throw Exception(
+      //       'ID доктора в ответе ($responseId) не соответствует запрошенному ($userId)');
+      // }
+      //
+      // final doctor = Doctor.fromJson(doctorData);
+      // apiClient.setCurrentDoctor(doctor);
+      debugPrint('🔄 ID доктора загружен: $userId');
       await Future.delayed(const Duration(milliseconds: 100));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

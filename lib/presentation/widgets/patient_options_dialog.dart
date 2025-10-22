@@ -17,7 +17,7 @@ class PatientOptionsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final fullName = _buildFullName();
     final birthDate = _formatBirthDate(patient['birth_date']);
-    final gender = patient['is_male'] == true ? 'Мужчина' : 'Женщина';
+    final gender = (patient['is_male'] == true || patient['gender'] == true) ? 'Мужчина' : 'Женщина';
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -75,8 +75,8 @@ class PatientOptionsDialog extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        patient['is_male'] == true 
-                            ? Icons.male 
+                        (patient['is_male'] == true || patient['gender'] == true)
+                            ? Icons.male
                             : Icons.female,
                         size: 16,
                         color: const Color(0xFF8B8B8B),
@@ -171,9 +171,9 @@ class PatientOptionsDialog extends StatelessWidget {
   }
 
   String _buildFullName() {
-    final lastName = patient['last_name'] ?? '';
-    final firstName = patient['first_name'] ?? '';
-    final middleName = patient['middle_name'] ?? '';
+    final lastName = patient['lastName'] ?? patient['last_name'] ?? '';
+    final firstName = patient['firstName'] ?? patient['first_name'] ?? '';
+    final middleName = patient['middleName'] ?? patient['middle_name'] ?? '';
 
     final parts = [lastName, firstName, middleName].where((s) => s.isNotEmpty);
     if (parts.isEmpty) return 'Неизвестный пациент';

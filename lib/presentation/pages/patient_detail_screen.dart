@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_client.dart';
-import 'edit_patient_screen.dart';
+// import 'edit_patient_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String patientId;
@@ -40,25 +40,25 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     }
   }
 
-  void _openEditScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditPatientScreen(
-          patientId: widget.patientId,
-          patientData: _patientData!,
-        ),
-      ),
-    ).then((result) {
-      // Обновляем данные после возвращения с экрана редактирования
-      if (result == true) {
-        setState(() {
-          _isLoading = true;
-        });
-        _patientFuture = _loadPatient();
-      }
-    });
-  }
+  // void _openEditScreen() {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) => EditPatientScreen(
+  //         patientId: widget.patientId,
+  //         patientData: _patientData!,
+  //       ),
+  //     ),
+  //   ).then((result) {
+  //     // Обновляем данные после возвращения с экрана редактирования
+  //     if (result == true) {
+  //       setState(() {
+  //         _isLoading = true;
+  //       });
+  //       _patientFuture = _loadPatient();
+  //     }
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -67,13 +67,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
         title: const Text('Карточка пациента'),
         backgroundColor: const Color(0xFF5F9EA0),
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _openEditScreen,
-            tooltip: 'Редактировать медкарту',
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.edit),
+        //     onPressed: _openEditScreen,
+        //     tooltip: 'Редактировать медкарту',
+        //   ),
+        // ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

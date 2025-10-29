@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../core/theme/theme_config.dart';
 
 /// Дизайн-система для полей ввода приложения
 class AppInputTheme {
   /// Основные цвета для состояний полей ввода
-  static const Color primaryColor = Color(0xFF5F9EA0);
-  static const Color secondaryColor = Color(0xFF4682B4);
-  static const Color backgroundColor = Color(0xFFF8F9FA);
-  static const Color errorColor = Color(0xFFD32F2F);
-  static const Color successColor = Color(0xFF388E3C);
-  static const Color textPrimary = Color(0xFF333333);
-  static const Color textSecondary = Color(0xFF8B8B8B);
+  static const Color primaryColor = AppTheme.primaryColor;
+  static const Color secondaryColor = AppTheme.secondaryColor;
+  static const Color backgroundColor = AppTheme.backgroundColor;
+  static const Color errorColor = AppTheme.errorColor;
+  static const Color successColor = AppTheme.successColor;
+  static const Color textPrimary = AppTheme.textPrimary;
+  static const Color textSecondary = AppTheme.textSecondary;
   static const Color borderColor = Color(0xFFE0E0E0);
   static const Color disabledColor = Color(0xFFF5F5F5);
 

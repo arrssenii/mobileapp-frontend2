@@ -50,7 +50,7 @@ class MyApp extends StatelessWidget {
   final ApiClient apiClient;
   final AuthRepository authRepository;
   final AuthService authService;
-  final WebSocketService webSocketService;
+  final WebSocketService webSocketService; // всё ещё создаём в main()
 
   const MyApp({
     super.key,
@@ -65,8 +65,12 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         Provider.value(value: apiClient),
-        Provider.value(value: this.authService),
-        Provider.value(value: this.webSocketService),
+        Provider.value(value: authService),
+        // 👇 ВАЖНО: оборачиваем в Provider с dispose
+        Provider<WebSocketService>(
+          create: (_) => webSocketService,
+          dispose: (_, service) => service.dispose(),
+        ),
         BlocProvider(
           create: (context) => LoginBloc(
             loginUseCase: LoginUseCase(authRepository),

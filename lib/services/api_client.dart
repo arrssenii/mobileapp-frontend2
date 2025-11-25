@@ -673,46 +673,78 @@ class ApiClient {
 
   // Медкарты
   Future<Map<String, dynamic>> getMedCardByPatientId(String patId) async {
-    return _handleApiCall(
-      () async {
-        final response = await _dio.get('/medcard/$patId');
-        
-        if (response.statusCode != 200) {
-          throw ApiError(
-            statusCode: response.statusCode,
-            message: 'Ошибка сервера: ${response.statusCode}',
-            rawError: response.data,
-          );
-        }
-        
-        // Обрабатываем структуру ответа с data
-        final responseData = response.data as Map<String, dynamic>;
-        if (responseData.containsKey('data')) {
-          return responseData['data'] as Map<String, dynamic>;
-        }
-        
-        return responseData;
-      },
-      errorMessage: 'Ошибка загрузки медкарты',
-    );
-  }
+  return _handleApiCall(
+    () async {
+      final response = await _dio.get('/medcard/$patId');
 
-  Future<Map<String, dynamic>> updateMedCard(String patId, Map<String, dynamic> data) async {
-    return _handleApiCall(
-      () async {
-        final response = await _dio.put(
-          '/medcard/$patId', 
-          data: data,
-          options: Options(
-            contentType: Headers.jsonContentType,
-          ),
+      if (response.statusCode != 200) {
+        throw ApiError(
+          statusCode: response.statusCode,
+          message: 'Ошибка сервера: ${response.statusCode}',
+          rawError: response.data,
         );
+      }
 
-        return response.data as Map<String, dynamic>;
-      },
-      errorMessage: 'Ошибка обновления медкарты',
-    );
-  }
+      final responseData = response.data as Map<String, dynamic>;
+      final data = responseData['data'] as Map<String, dynamic>? ?? responseData;
+
+      // Преобразование данных в ожидаемый формат
+      final normalized = <String, dynamic>{};
+
+      // Основные поля
+      normalized['display_name'] = data['clientName'] ?? '';
+      normalized['birth_date'] = data['birthDate'] ?? '';
+      normalized['age'] = data['age'];
+      normalized['snils'] = data['medCardSnils'] ?? '';
+      normalized['workplace'] = ''; // API не предоставляет workplace
+
+      // Телефоны
+      final phones = (data['phones'] as List<dynamic>?)?.cast<String>() ?? [];
+      normalized['mobile_phone'] = phones.isNotEmpty ? phones.first : '';
+      normalized['additional_phone'] = phones.length > 1 ? phones[1] : '';
+
+      // Email
+      final emails = (data['emails'] as List<dynamic>?)?.cast<String>() ?? [];
+      normalized['email'] = emails.isNotEmpty ? emails.first : '';
+
+      // Адрес
+      final addresses = (data['addresses'] as List<dynamic>?)?.cast<String>() ?? [];
+      normalized['address'] = addresses.isNotEmpty ? addresses.first : '';
+
+      // Полисы (берём первый)
+      final policies = (data['policies'] as List<dynamic>?) ?? [];
+      if (policies.isNotEmpty) {
+        final firstPolicy = policies.first as Map<String, dynamic>;
+        normalized['policy'] = {
+          'type': firstPolicy['type'] ?? '',
+          'number': firstPolicy['number'] ?? '',
+        };
+      }
+
+      // Сертификаты (берём первый)
+      final certificates = (data['certificates'] as List<dynamic>?) ?? [];
+      if (certificates.isNotEmpty) {
+        final firstCert = certificates.first as Map<String, dynamic>;
+        normalized['certificate'] = {
+          'date': firstCert['startDate'] ?? '',
+          'number': firstCert['code'] ?? '',
+        };
+      }
+
+      // Лечащий врач (если есть)
+      // normalized['attending_doctor'] = {...}; // если API возвращает
+
+      // Законный представитель (если есть)
+      // normalized['legal_representative'] = {...};
+
+      // Родственник (если есть)
+      // normalized['relative'] = {...};
+
+      return normalized;
+    },
+    errorMessage: 'Ошибка загрузки медкарты',
+  );
+}
 
   // Приёмы в стационаре
   Future<Map<String, dynamic>> getReceptionsHospitalByDoctorAndDate(

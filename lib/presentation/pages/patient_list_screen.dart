@@ -224,8 +224,20 @@ String _buildFullName(Map<String, dynamic> patient) {
                 child: ResponsiveCardList(
                   type: CardListType.patients,
                   items: _filteredPatients,
-                  onDetails: (item) => _openPatientDetails(item as Map<String, dynamic>),
-                  onHistory: (item) => _openPatientHistory(item as Map<String, dynamic>),
+                  onDetails: (item) {
+                    if (item is Map<String, dynamic>) {
+                      _openPatientDetails(item);
+                    } else {
+                      debugPrint('⚠️ Unexpected item type for details: ${item.runtimeType}');
+                    }
+                  },
+                  onHistory: (item) {
+                    if (item is Map<String, dynamic>) {
+                      _openPatientHistory(item);
+                    } else {
+                      debugPrint('⚠️ Unexpected item type for history: ${item.runtimeType}');
+                    }
+                  },
                   onRefresh: _refreshPatients,
                 ),
               ),

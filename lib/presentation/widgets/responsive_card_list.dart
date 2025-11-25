@@ -13,10 +13,10 @@ enum CardListType {
 
 class ResponsiveCardList extends StatelessWidget {
   final CardListType type;
-  final List<dynamic> items;
+  final List<Map<String, dynamic>> items;
   final Function(BuildContext, dynamic)? onItemTap;
-  final Function(dynamic)? onDetails;
-  final Function(dynamic)? onHistory;
+  final Function(Map<String, dynamic>)? onDetails;
+  final Function(Map<String, dynamic>)? onHistory;
   final TextEditingController? searchController;
   final Function()? onAdd;
   final Function(dynamic)? onItemAdded;

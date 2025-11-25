@@ -64,10 +64,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
       setState(() {
         _patients = patientsData.map((patient) {
           // Обрабатываем разные варианты структуры данных
-          final patientId = patient['PatientID']?.toString() ?? patient['patientID']?.toString() ?? '';
-          final fullName = patient['FullName'] ?? patient['fullName'] ?? patient['full_name'] ?? '';
-          final gender = patient['Gender'] ?? patient['gender'] ?? patient['is_male'] ?? false;
-          final birthDate = patient['BirthDate'] ?? patient['birthDate'] ?? patient['birth_date'] ?? '';
+          final patientId = patient['clientCode']?.toString() ?? '';
+          final fullName = patient['clientName'] ?? '';
+          final gender = patient['gender'] ?? '';
+          final birthDate = patient['birthDate'] ?? '';
           
           // Разбиваем полное имя на компоненты
           final nameParts = fullName.split(' ');
@@ -85,7 +85,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
             'firstName': firstName,
             'lastName': lastName,
             'middleName': middleName,
-            'is_male': gender == true,
+            'is_male': gender == "Мужской",
             'birth_date': birthDate,
           };
         }).toList();
@@ -120,38 +120,6 @@ class _PatientListScreenState extends State<PatientListScreen> {
     super.dispose();
   }
 
-  Future<void> _addNewPatient(Map<String, dynamic> patientData) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Формируем данные в соответствии с требуемой структурой
-      final patientPayload = {
-        'first_name': patientData['firstName'],
-        'last_name': patientData['lastName'],
-        'middle_name': patientData['middleName'],
-        'birth_date': patientData['birthDate'],
-        'is_male': patientData['gender'] == 'Мужской',
-      };
-
-      await _apiClient.createPatient(patientPayload);
-      await _fetchPatients();
-    } on ApiError catch (e) {
-      setState(() {
-        _errorMessage = 'Ошибка добавления: ${e.message}';
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Ошибка: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   void _openPatientDetails(Map<String, dynamic> patient) {
     Navigator.push(
       context,
@@ -181,17 +149,6 @@ String _buildFullName(Map<String, dynamic> patient) {
   final middleName = patient['middleName'] ?? patient['middle_name'] ?? '';
   return '$lastName $firstName $middleName'.trim();
 }
-
-  void _openAddPatientScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddPatientScreen()),
-    ).then((result) {
-      if (result != null) {
-        _addNewPatient(result);
-      }
-    });
-  }
 
  @override
   Widget build(BuildContext context) {

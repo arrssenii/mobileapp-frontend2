@@ -517,15 +517,48 @@ class ApiClient {
     return _handleApiCall(
       () async {
         final response = await _dio.get('/patients');
-        final responseData = response.data as Map<String, dynamic>;
+        final responseData = response.data;
   
-        final data = responseData['data'];
-        if (data is List<dynamic>) {
-          return data.cast<Map<String, dynamic>>();
-        } else {
-          debugPrint('⚠️ Ключ "data" не найден или не является списком: $data');
+        // Убедимся, что корневой элемент — Map
+        if (responseData is! Map<String, dynamic>) {
+          throw Exception('Неверный формат корневого ответа');
+        }
+  
+        // Проверяем, есть ли ключ 'data'
+        if (responseData.containsKey('data')) {
+          final data = responseData['data'];
+  
+          // Случай 1: data — это список (ваш реальный кейс)
+          if (data is List) {
+            return data;
+          }
+  
+          // Случай 2: data — это объект, внутри которого есть 'Patient' или 'patient'
+          if (data is Map<String, dynamic>) {
+            if (data.containsKey('Patient') && data['Patient'] is List) {
+              return data['Patient'] as List;
+            }
+            if (data.containsKey('patient') && data['patient'] is List) {
+              return data['patient'] as List;
+            }
+          }
+  
+          // Неизвестная структура внутри 'data'
+          debugPrint('⚠️ Неизвестная структура внутри "data": $data');
           return [];
         }
+  
+        // Альтернативные ключи на корневом уровне
+        if (responseData.containsKey('Patient') && responseData['Patient'] is List) {
+          return responseData['Patient'] as List;
+        }
+        if (responseData.containsKey('patient') && responseData['patient'] is List) {
+          return responseData['patient'] as List;
+        }
+  
+        // Ничего не подошло
+        debugPrint('⚠️ Неизвестная структура ответа пациентов: ${responseData.keys}');
+        return [];
       },
       errorMessage: 'Ошибка загрузки пациентов',
     );

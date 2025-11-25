@@ -519,24 +519,28 @@ class ApiClient {
         final response = await _dio.get('/patients');
         
         // Обрабатываем структуру ответа из Swagger
-        final responseData = response.data as Map<String, dynamic>;
-        
-        // Проверяем разные варианты ключей
-        if (responseData.containsKey('data')) {
-          final data = responseData['data'] as Map<String, dynamic>;
-          if (data.containsKey('Patient')) {
-            return data['Patient'] as List<dynamic>;
-          } else if (data.containsKey('patient')) {
-            return data['patient'] as List<dynamic>;
+        final responseData = response.data;
+
+        if (responseData is List<dynamic>) {
+          // Это список — значит, пациенты пришли сразу
+          return responseData.cast<Map<String, dynamic>>();
+        } else if (responseData is Map<String, dynamic>) {
+          // Это объект — ищем ключи data/Patient/patient
+          final data = responseData['data'];
+          if (data is Map<String, dynamic>) {
+            if (data.containsKey('Patient')) {
+              return (data['Patient'] as List<dynamic>).cast<Map<String, dynamic>>();
+            } else if (data.containsKey('patient')) {
+              return (data['patient'] as List<dynamic>).cast<Map<String, dynamic>>();
+            }
+          } else if (responseData.containsKey('Patient')) {
+            return (responseData['Patient'] as List<dynamic>).cast<Map<String, dynamic>>();
+          } else if (responseData.containsKey('patient')) {
+            return (responseData['patient'] as List<dynamic>).cast<Map<String, dynamic>>();
           }
-        } else if (responseData.containsKey('Patient')) {
-          return responseData['Patient'] as List<dynamic>;
-        } else if (responseData.containsKey('patient')) {
-          return responseData['patient'] as List<dynamic>;
         }
         
-        // Если нет ожидаемых ключей, возвращаем пустой список
-        debugPrint('⚠️ Неизвестная структура ответа пациентов: ${responseData.keys}');
+        debugPrint('⚠️ Неизвестная структура ответа пациентов: $responseData');
         return [];
       },
       errorMessage: 'Ошибка загрузки пациентов',

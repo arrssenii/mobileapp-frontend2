@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/websocket_service.dart';
+import '../services/cache_service.dart'; // 👈 Добавляем кэширование
 
 class WebSocketProvider extends ChangeNotifier {
   final WebSocketService _webSocketService;
@@ -10,7 +11,19 @@ class WebSocketProvider extends ChangeNotifier {
 
   List<Map<String, dynamic>> get calls => _calls;
 
-  WebSocketProvider(this._webSocketService);
+  WebSocketProvider(this._webSocketService) {
+    // ✅ Загружаем вызовы из кэша при создании провайдера
+    _loadCallsFromCache();
+  }
+
+  Future<void> _loadCallsFromCache() async {
+    try {
+      _calls = await CacheService.loadCalls();
+      notifyListeners();
+    } catch (e) {
+      print('Ошибка загрузки вызовов из кэша: $e');
+    }
+  }
 
   Future<void> connect(String userId) async {
     await _webSocketService.connect(userId);
@@ -28,6 +41,9 @@ class WebSocketProvider extends ChangeNotifier {
       );
       _calls.insert(0, newCall);
       notifyListeners(); // Уведомляем всех слушателей
+
+      // ✅ Сохраняем вызовы в кэш
+      CacheService.saveCalls(_calls);
     } else if (type == 'call_status_update') {
       final callId = message['data']['call_id'];
       final newStatus = message['data']['status'];
@@ -65,13 +81,10 @@ class WebSocketProvider extends ChangeNotifier {
           'name': client?['name'] ?? 'Пациент неизвестен',
           'hasConclusion': false, // пока нет диагноза
           // ✅ Добавляем поля, которые ожидаются в PatientCardWidget
-          'firstName':
-              client?['name']?.split(' ')[1] ??
-              '', // "Яшкина Светлана Витальевна" -> "Светлана"
-          'lastName': client?['name']?.split(' ')[0] ?? '', // -> "Яшкина"
+          'firstName': client?['name']?.split(' ')[1] ?? '', // "Яшкина Светлана Витальевна" -> "Светлана"
+          'lastName': client?['name']?.split(' ')[0] ?? '',  // -> "Яшкина"
           'middleName': client?['name']?.split(' ')[2] ?? '', // -> "Витальевна"
           'birthDate': client?['birthDate'], // если birthDate есть
-          // добавь другие нужные поля
         },
       ],
       'isCompleted': false,
@@ -82,6 +95,9 @@ class WebSocketProvider extends ChangeNotifier {
 
   void updateCallStatus(String callId, String status) {
     _updateCallStatus(callId, status);
+
+    // ✅ Сохраняем вызовы в кэш
+    CacheService.saveCalls(_calls);
   }
 
   void _updateCallStatus(String callId, String status) {

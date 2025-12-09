@@ -17,7 +17,16 @@ class CacheService {
     final jsonString = prefs.getString(_callsKey);
     if (jsonString != null) {
       final list = jsonDecode(jsonString) as List<dynamic>;
-      return list.cast<Map<String, dynamic>>();
+      final calls = list.cast<Map<String, dynamic>>();
+
+      // ✅ Преобразуем строку обратно в DateTime
+      for (final call in calls) {
+        if (call['date'] is String) {
+          call['date'] = DateTime.parse(call['date'] as String);
+        }
+      }
+
+      return calls;
     }
     return [];
   }

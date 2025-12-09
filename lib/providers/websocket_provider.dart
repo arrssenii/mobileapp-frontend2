@@ -64,7 +64,7 @@ class WebSocketProvider extends ChangeNotifier {
 
     return {
       'id': callData['number'], // используем number как ID
-      'date': createdAt,
+      'date': createdAt.toIso8601String(), // ✅ Преобразуем DateTime в строку
       'address': callData['address'] ?? 'Адрес не указан',
       'phone':
           client?['phone'] ?? 'Телефон не указан', // если phone есть в client
@@ -81,8 +81,10 @@ class WebSocketProvider extends ChangeNotifier {
           'name': client?['name'] ?? 'Пациент неизвестен',
           'hasConclusion': false, // пока нет диагноза
           // ✅ Добавляем поля, которые ожидаются в PatientCardWidget
-          'firstName': client?['name']?.split(' ')[1] ?? '', // "Яшкина Светлана Витальевна" -> "Светлана"
-          'lastName': client?['name']?.split(' ')[0] ?? '',  // -> "Яшкина"
+          'firstName':
+              client?['name']?.split(' ')[1] ??
+              '', // "Яшкина Светлана Витальевна" -> "Светлана"
+          'lastName': client?['name']?.split(' ')[0] ?? '', // -> "Яшкина"
           'middleName': client?['name']?.split(' ')[2] ?? '', // -> "Витальевна"
           'birthDate': client?['birthDate'], // если birthDate есть
         },

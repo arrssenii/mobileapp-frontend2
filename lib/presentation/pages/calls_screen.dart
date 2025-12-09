@@ -42,10 +42,16 @@ class _CallsScreenState extends State<CallsScreen> {
 
   // ❌ УБРАТЬ _loadInitialCalls()
 
-  void _filterCallsByDate(List<Map<String, dynamic>> allCalls) {
-    // ✅ Принимай все вызовы как аргумент
-    _filteredCalls = allCalls.where((call) {
-      final callDate = call['date'] as DateTime;
+  void _filterCallsByDate([List<Map<String, dynamic>>? allCalls]) {
+    final calls =
+        allCalls ??
+        Provider.of<WebSocketProvider>(context, listen: false).calls;
+
+    _filteredCalls = calls.where((call) {
+      // ✅ Преобразуем строку в DateTime
+      final callDateString = call['date'] as String;
+      final callDate = DateTime.parse(callDateString);
+
       return callDate.year == _selectedDate.year &&
           callDate.month == _selectedDate.month &&
           callDate.day == _selectedDate.day;
@@ -66,8 +72,10 @@ class _CallsScreenState extends State<CallsScreen> {
       if (!aEmergency && bEmergency) return 1;
 
       // Потом сортировка по времени
-      final aTime = a['date'] as DateTime;
-      final bTime = b['date'] as DateTime;
+      final aTimeString = a['date'] as String;
+      final aTime = DateTime.parse(aTimeString);
+      final bTimeString = b['date'] as String;
+      final bTime = DateTime.parse(bTimeString);
       return aTime.compareTo(bTime);
     });
 

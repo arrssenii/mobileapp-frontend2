@@ -47,20 +47,31 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
   }
 
   void _startConsultation() async {
-    final fullName = _getFullName();
-    final apiClient = Provider.of<ApiClient>(context, listen: false);
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final doctorId = await authService.getDoctorId();
-    
+    final patientName = widget.patient['name'] ?? 'Пациент';
+    final recordId =
+        widget.patient['receptionId'] as int?; // Это может быть null
+    final emergencyCallId = widget.emergencyCallId; // Это int
+
+    // ❌ Проверь, что recordId не null, прежде чем открывать экран
+    if (recordId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ID записи пациента недействителен'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ConsultationScreen(
-          patientName: fullName,
-          appointmentType: 'emergency',
-          recordId: widget.patient['receptionId'],
-          doctorId: int.parse(doctorId ?? '1'),
-          emergencyCallId: widget.emergencyCallId,
+          patientName: patientName, // ✅ String
+          appointmentType: 'emergency', // ✅ String
+          recordId: recordId, // ✅ int
+          doctorId: 1, // или получай из AuthService
+          emergencyCallId: emergencyCallId, // ✅ int
         ),
       ),
     ).then((result) {
@@ -121,15 +132,13 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PatientDetailScreen(
-            patientId: patientId,
-          ),
+          builder: (context) => PatientDetailScreen(patientId: patientId),
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID пациента не найден')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ID пациента не найден')));
     }
   }
 
@@ -140,16 +149,14 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PatientHistoryScreen(
-            patientId: patientId,
-            patientName: fullName,
-          ),
+          builder: (context) =>
+              PatientHistoryScreen(patientId: patientId, patientName: fullName),
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID пациента не найден')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ID пациента не найден')));
     }
   }
 
@@ -164,7 +171,8 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
   }
 
   String _getFullName() {
-    return '${widget.patient['lastName'] ?? ''} ${widget.patient['firstName'] ?? ''} ${widget.patient['middleName'] ?? ''}'.trim();
+    return '${widget.patient['lastName'] ?? ''} ${widget.patient['firstName'] ?? ''} ${widget.patient['middleName'] ?? ''}'
+        .trim();
   }
 
   String _getGender() {
@@ -175,23 +183,23 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
     if (snils.isEmpty) return 'Не указано';
     final digits = snils.replaceAll(RegExp(r'[^\d]'), '');
     if (digits.length < 11) return snils;
-    
+
     return '${digits.substring(0, 3)}-${digits.substring(3, 6)}-'
-           '${digits.substring(6, 9)} ${digits.substring(9, 11)}';
+        '${digits.substring(6, 9)} ${digits.substring(9, 11)}';
   }
 
   String _formatOms(String oms) {
     if (oms.isEmpty) return 'Не указано';
     final digits = oms.replaceAll(RegExp(r'[^\d]'), '');
     if (digits.length < 16) return oms;
-    
+
     return '${digits.substring(0, 4)} ${digits.substring(4, 8)} '
-           '${digits.substring(8, 12)} ${digits.substring(12, 16)}';
+        '${digits.substring(8, 12)} ${digits.substring(12, 16)}';
   }
 
   Future<void> _loadFullPatientData() async {
     if (_isLoadingFullData || _fullPatientData != null) return;
-    
+
     setState(() {
       _isLoadingFullData = true;
     });
@@ -213,13 +221,17 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
 
   String _getBirthDate() {
     return widget.patient['birth_date'] != null
-        ? DateFormat('dd.MM.yyyy').format(DateTime.parse(widget.patient['birth_date']))
+        ? DateFormat(
+            'dd.MM.yyyy',
+          ).format(DateTime.parse(widget.patient['birth_date']))
         : '';
   }
 
   String _getAge() {
     return widget.patient['birth_date'] != null
-        ? (DateTime.now().year - DateTime.parse(widget.patient['birth_date']).year).toString()
+        ? (DateTime.now().year -
+                  DateTime.parse(widget.patient['birth_date']).year)
+              .toString()
         : '';
   }
 
@@ -245,29 +257,30 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
     if (phone.isNotEmpty) {
       infoRows.add(_buildInfoRow('Телефон', phone));
     }
-    
+
     final email = patientData['email']?.toString() ?? '';
     if (email.isNotEmpty) {
       infoRows.add(_buildInfoRow('Email', email));
     }
-    
+
     // Документы
     final snils = patientData['snils']?.toString() ?? '';
     if (snils.isNotEmpty) {
       infoRows.add(_buildInfoRow('СНИЛС', _formatSnils(snils)));
     }
-    
+
     final oms = patientData['policy']?['number']?.toString() ?? '';
     if (oms.isNotEmpty) {
       infoRows.add(_buildInfoRow('Полис ОМС', _formatOms(oms)));
     }
-    
+
     final passportSeries = patientData['passport']?['series']?.toString() ?? '';
     if (passportSeries.isNotEmpty) {
-      final passportNumber = patientData['passport']?['number']?.toString() ?? '';
+      final passportNumber =
+          patientData['passport']?['number']?.toString() ?? '';
       infoRows.add(_buildInfoRow('Паспорт', '$passportSeries $passportNumber'));
     }
-    
+
     // Адрес
     final address = patientData['address']?.toString() ?? '';
     if (address.isNotEmpty) {
@@ -301,10 +314,7 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textPrimary,
-              ),
+              style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary),
             ),
           ),
         ],
@@ -318,7 +328,7 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
     final birthDate = _getBirthDate();
     final age = _getAge();
     final apiClient = Provider.of<ApiClient>(context, listen: false);
-    
+
     return DefaultTabController(
       length: 2,
       child: GestureDetector(
@@ -363,14 +373,14 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   // Основные данные пациента
                   _buildPatientInfoSection(),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Основные кнопки действий
                   Row(
                     children: [
@@ -384,15 +394,23 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              icon: const Icon(Icons.medical_services, size: 16),
+                              icon: const Icon(
+                                Icons.medical_services,
+                                size: 16,
+                              ),
                               label: const Text(
                                 'Заключение',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
@@ -409,7 +427,9 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.secondaryColor,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -417,7 +437,10 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                               icon: const Icon(Icons.list_alt, size: 16),
                               label: const Text(
                                 'Услуги',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
@@ -425,12 +448,13 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // TabBar для документов
                   GestureDetector(
-                    onTap: () {}, // Пустой обработчик для предотвращения всплытия
+                    onTap:
+                        () {}, // Пустой обработчик для предотвращения всплытия
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -493,43 +517,71 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                                   ),
                                   const SizedBox(height: 12),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
                                     children: [
                                       ElevatedButton.icon(
-                                        icon: const Icon(Icons.picture_as_pdf, size: 16),
+                                        icon: const Icon(
+                                          Icons.picture_as_pdf,
+                                          size: 16,
+                                        ),
                                         label: const Text('Открыть PDF'),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppTheme.secondaryColor,
+                                          backgroundColor:
+                                              AppTheme.secondaryColor,
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                         ),
                                         onPressed: () async {
                                           try {
-                                            final pdfFile = await _pdfService.generateFullPatientAgreementWithBackendSignature(
-                                              fullName: fullName,
-                                              address: widget.patient['address'] ?? 'не указано',
-                                              receptionId: widget.patient['receptionId'].toString(),
-                                              apiClient: apiClient,
-                                            );
+                                            final pdfFile = await _pdfService
+                                                .generateFullPatientAgreementWithBackendSignature(
+                                                  fullName: fullName,
+                                                  address:
+                                                      widget
+                                                          .patient['address'] ??
+                                                      'не указано',
+                                                  receptionId: widget
+                                                      .patient['receptionId']
+                                                      .toString(),
+                                                  apiClient: apiClient,
+                                                );
                                             Uint8List pdfBytes;
                                             if (kIsWeb) {
-                                              await _pdfService.openPdf(pdfFile);
-                                              pdfBytes = await pdfFile!.readAsBytes();
+                                              await _pdfService.openPdf(
+                                                pdfFile,
+                                              );
+                                              pdfBytes = await pdfFile!
+                                                  .readAsBytes();
                                             } else {
-                                              pdfBytes = await pdfFile!.readAsBytes();
+                                              pdfBytes = await pdfFile!
+                                                  .readAsBytes();
                                             }
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (_) => PdfViewerScreen(pdfBytes: pdfBytes),
+                                                builder: (_) => PdfViewerScreen(
+                                                  pdfBytes: pdfBytes,
+                                                ),
                                               ),
                                             );
                                           } catch (e) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Ошибка генерации PDF: $e')),
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Ошибка генерации PDF: $e',
+                                                ),
+                                              ),
                                             );
                                           }
                                         },
@@ -538,37 +590,64 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
                                         icon: const Icon(Icons.edit, size: 16),
                                         label: const Text('Подписать'),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppTheme.primaryColor,
+                                          backgroundColor:
+                                              AppTheme.primaryColor,
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                         ),
                                         onPressed: () async {
-                                          final receptionId = widget.patient['receptionId']?.toString();
+                                          final receptionId = widget
+                                              .patient['receptionId']
+                                              ?.toString();
                                           if (receptionId != null) {
                                             try {
-                                              final signatureBytes = await Navigator.push<Uint8List>(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => PdfSignatureScreen(
-                                                    receptionId: receptionId,
-                                                  ),
-                                                ),
-                                              );
+                                              final signatureBytes =
+                                                  await Navigator.push<
+                                                    Uint8List
+                                                  >(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          PdfSignatureScreen(
+                                                            receptionId:
+                                                                receptionId,
+                                                          ),
+                                                    ),
+                                                  );
                                               if (signatureBytes != null) {
-                                                await apiClient.uploadReceptionSignature(
-                                                  receptionId: receptionId,
-                                                  signatureBytes: signatureBytes
-                                                );
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(content: Text('Подпись добавлена')),
+                                                await apiClient
+                                                    .uploadReceptionSignature(
+                                                      receptionId: receptionId,
+                                                      signatureBytes:
+                                                          signatureBytes,
+                                                    );
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Подпись добавлена',
+                                                    ),
+                                                  ),
                                                 );
                                               }
                                             } catch (e) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Ошибка подписи: $e')),
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Ошибка подписи: $e',
+                                                  ),
+                                                ),
                                               );
                                             }
                                           }

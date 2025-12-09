@@ -4,7 +4,7 @@ import 'schedule_screen.dart';
 import 'patient_list_screen.dart';
 import 'calls_screen.dart';
 import '../../services/auth_service.dart';
-import '../../services/websocket_service.dart';
+import '../../providers/websocket_provider.dart'; // 👈 Импортируем WebSocketProvider
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -16,10 +16,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    PatientListScreen(),
-    CallsScreen(),
-  ];
+  final List<Widget> _pages = [PatientListScreen(), CallsScreen()];
 
   @override
   void initState() {
@@ -33,12 +30,20 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _connectWebSocket() async {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
-      final webSocketService = Provider.of<WebSocketService>(context, listen: false);
-      
+      // ✅ Используем WebSocketProvider вместо WebSocketService
+      final webSocketProvider = Provider.of<WebSocketProvider>(
+        context,
+        listen: false,
+      );
+
       final doctorId = await authService.getDoctorId();
       if (doctorId != null) {
-        await webSocketService.connect(doctorId);
-        debugPrint('✅ WebSocket подключен для доктора: $doctorId');
+        await webSocketProvider.connect(
+          doctorId.toString(),
+        ); // Подключаем через провайдер
+        debugPrint(
+          '✅ WebSocket подключен через WebSocketProvider для доктора: $doctorId',
+        );
       } else {
         debugPrint('⚠️ ID доктора не найден, WebSocket не подключен');
       }
@@ -49,9 +54,9 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    // Отключаем вебсокет при закрытии приложения
-    final webSocketService = Provider.of<WebSocketService>(context, listen: false);
-    webSocketService.disconnect();
+    // ❌ НЕ НУЖНО отключать WebSocketService напрямую
+    // final webSocketService = Provider.of<WebSocketService>(context, listen: false);
+    // webSocketService.disconnect();
     super.dispose();
   }
 
@@ -89,7 +94,7 @@ class _MainScreenState extends State<MainScreen> {
             ],
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.white70,
-            backgroundColor: const Color(0xFF4682B4), 
+            backgroundColor: const Color(0xFF4682B4),
             showUnselectedLabels: true,
             type: BottomNavigationBarType.fixed,
             selectedLabelStyle: const TextStyle(

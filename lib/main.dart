@@ -28,22 +28,32 @@ import 'services/websocket_service.dart';
 // Theme
 import 'core/theme/theme_config.dart';
 
+// Providers
+import 'providers/websocket_provider.dart';
+import 'providers/calls_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   final prefs = await SharedPreferences.getInstance();
 
   final authService = AuthService(prefs);
   final apiClient = ApiClient(authService);
   final authRemoteDataSource = AuthRemoteDataSourceImpl(apiClient: apiClient);
-  final authRepository = AuthRepositoryImpl(remoteDataSource: authRemoteDataSource);
-  
-  runApp(MyApp(
-    apiClient: apiClient,
-    authRepository: authRepository,
-    authService: authService,
-    webSocketService: WebSocketService(),
-  ));
+  final authRepository = AuthRepositoryImpl(
+    remoteDataSource: authRemoteDataSource,
+  );
+
+  final webSocketService = WebSocketService();
+
+  runApp(
+    MyApp(
+      apiClient: apiClient,
+      authRepository: authRepository,
+      authService: authService,
+      webSocketService: webSocketService,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -62,19 +72,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
+    return MultiProvider(
       providers: [
         Provider.value(value: apiClient),
         Provider.value(value: authService),
-        // 👇 ВАЖНО: оборачиваем в Provider с dispose
         Provider<WebSocketService>(
           create: (_) => webSocketService,
           dispose: (_, service) => service.dispose(),
         ),
+        // 👇 Добавляем WebSocketProvider и CallsProvider
+        ChangeNotifierProvider(
+          create: (_) => WebSocketProvider(webSocketService),
+        ),
+        ChangeNotifierProvider(create: (_) => CallsProvider()),
         BlocProvider(
-          create: (context) => LoginBloc(
-            loginUseCase: LoginUseCase(authRepository),
-          ),
+          create: (context) =>
+              LoginBloc(loginUseCase: LoginUseCase(authRepository)),
         ),
       ],
       child: MaterialApp(
@@ -85,9 +98,7 @@ class MyApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [
-          Locale('ru', 'RU'),
-        ],
+        supportedLocales: const [Locale('ru', 'RU')],
         theme: AppTheme.lightTheme,
         home: FutureBuilder<String?>(
           future: authService.getToken(),
@@ -97,12 +108,12 @@ class MyApp extends StatelessWidget {
                 body: Center(child: CircularProgressIndicator()),
               );
             }
-            
+
             if (snapshot.hasData && snapshot.data != null) {
               // Проверяем только наличие токена, данные доктора не требуются
               return const MainScreen();
             }
-            
+
             // Для тестирования WebSocket можно временно использовать тестовый экран
             // return const WebSocketTestScreen(userId: '1');
             return LoginScreen();
@@ -111,7 +122,6 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
-
 }
 
 // main.dart (измененная реализация AuthRemoteDataSourceImpl)
@@ -127,10 +137,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'phone': phone,
         'password': password,
       });
-      
+
       // Проверяем структуру ответа
       final responseData = response as Map<String, dynamic>;
-      
+
       // Обрабатываем разные форматы ответа
       Map<String, dynamic> authData;
       if (responseData.containsKey('data')) {
@@ -140,23 +150,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         // Формат: {id: 5, token: ...}
         authData = responseData;
       }
-      
+
       if (authData.containsKey('token') && authData.containsKey('id')) {
         // Преобразуем ID в int
         final userId = authData['id'] is int
             ? authData['id']
             : int.tryParse(authData['id'].toString());
-        
+
         if (userId == null) {
           throw Exception('Неверный формат ID пользователя');
         }
-        
-        return UserModel(
-          token: authData['token'] as String,
-          userId: userId,
-        );
+
+        return UserModel(token: authData['token'] as String, userId: userId);
       } else {
-        throw Exception('Неверный формат ответа сервера: отсутствует токен или id');
+        throw Exception(
+          'Неверный формат ответа сервера: отсутствует токен или id',
+        );
       }
     } on DioException catch (e) {
       throw Exception('Ошибка сети: ${e.message}');

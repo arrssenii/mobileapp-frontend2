@@ -48,9 +48,17 @@ class _CallsScreenState extends State<CallsScreen> {
         Provider.of<WebSocketProvider>(context, listen: false).calls;
 
     _filteredCalls = calls.where((call) {
-      // ✅ Преобразуем строку в DateTime
-      final callDateString = call['date'] as String;
-      final callDate = DateTime.parse(callDateString);
+      // ✅ Преобразуем строку или DateTime в DateTime
+      final callDateValue = call['date'];
+      final DateTime callDate;
+      if (callDateValue is String) {
+        callDate = DateTime.parse(callDateValue);
+      } else if (callDateValue is DateTime) {
+        callDate = callDateValue;
+      } else {
+        // Если формат неизвестен, пропускаем вызов
+        return false;
+      }
 
       return callDate.year == _selectedDate.year &&
           callDate.month == _selectedDate.month &&
@@ -72,22 +80,30 @@ class _CallsScreenState extends State<CallsScreen> {
       if (!aEmergency && bEmergency) return 1;
 
       // Потом сортировка по времени
-      final aTimeString = a['date'] as String;
-      final aTime = DateTime.parse(aTimeString);
-      final bTimeString = b['date'] as String;
-      final bTime = DateTime.parse(bTimeString);
+      final aTimeValue = a['date'];
+      final DateTime aTime;
+      if (aTimeValue is String) {
+        aTime = DateTime.parse(aTimeValue);
+      } else if (aTimeValue is DateTime) {
+        aTime = aTimeValue;
+      } else {
+        aTime = DateTime.now(); // fallback
+      }
+
+      final bTimeValue = b['date'];
+      final DateTime bTime;
+      if (bTimeValue is String) {
+        bTime = DateTime.parse(bTimeValue);
+      } else if (bTimeValue is DateTime) {
+        bTime = bTimeValue;
+      } else {
+        bTime = DateTime.now(); // fallback
+      }
+
       return aTime.compareTo(bTime);
     });
 
     // ❌ УБРАТЬ setState — Consumer сам перерисует UI
-  }
-
-  void _handleDateSelected(DateTime date) {
-    setState(() {
-      _selectedDate = date;
-      // ❌ НЕЛЬЗЯ вызывать _filterCallsByDate здесь, потому что Provider.of(context) будет бросать исключение
-      // потому что context ещё не подписан на Provider через Consumer
-    });
   }
 
   // ❌ УБРАТЬ _openCallDetails — определим ниже

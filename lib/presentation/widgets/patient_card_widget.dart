@@ -20,6 +20,7 @@ import '../../data/models/medical_card_model.dart';
 class PatientCardWidget extends StatefulWidget {
   final Map<String, dynamic> patient;
   final int emergencyCallId;
+  final List<dynamic>? templates; // ✅ Получаем templates из CallDetailScreen
   final VoidCallback onPatientUpdated;
   final VoidCallback onCallCompleted;
 
@@ -27,6 +28,7 @@ class PatientCardWidget extends StatefulWidget {
     super.key,
     required this.patient,
     required this.emergencyCallId,
+    this.templates, // ✅ Необязательное поле
     required this.onPatientUpdated,
     required this.onCallCompleted,
   });
@@ -47,12 +49,15 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
   }
 
   void _startConsultation() async {
+    // ✅ Проверь, что recordId не null, прежде чем открывать экран
+    final recordId = widget.patient['receptionId'] as int?;
     final patientName = widget.patient['name'] ?? 'Пациент';
-    final recordId =
-        widget.patient['receptionId'] as int?; // Это может быть null
-    final emergencyCallId = widget.emergencyCallId; // Это int
+    final emergencyCallId = widget.emergencyCallId;
 
-    // ❌ Проверь, что recordId не null, прежде чем открывать экран
+    // ✅ Получаем шаблоны из данных пациента
+    final templates =
+        widget.patient['templates'] as List<Map<String, dynamic>>? ?? [];
+
     if (recordId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -72,6 +77,8 @@ class _PatientCardWidgetState extends State<PatientCardWidget> {
           recordId: recordId, // ✅ int
           doctorId: 1, // или получай из AuthService
           emergencyCallId: emergencyCallId, // ✅ int
+          // ✅ Передаём шаблоны под правильным именем
+          templatesFromWebSocket: templates,
         ),
       ),
     ).then((result) {

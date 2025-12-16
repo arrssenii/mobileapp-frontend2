@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/websocket_service.dart';
-import '../services/cache_service.dart'; // 👈 Добавляем кэширование
+import '../services/cache_service.dart';
 
 class WebSocketProvider extends ChangeNotifier {
   final WebSocketService _webSocketService;
@@ -36,9 +36,8 @@ class WebSocketProvider extends ChangeNotifier {
   void _handleMessage(Map<String, dynamic> message) {
     final type = message['type']?.toString();
     if (type == 'new_call') {
-      final newCall = _transformWebSocketCall(
-        message['data'] as Map<String, dynamic>,
-      );
+      // ✅ Передаём ВСЁ сообщение, а не только message['data']
+      final newCall = _transformWebSocketCall(message);
       _calls.insert(0, newCall);
       notifyListeners(); // Уведомляем всех слушателей
 
@@ -51,7 +50,25 @@ class WebSocketProvider extends ChangeNotifier {
     }
   }
 
-  Map<String, dynamic> _transformWebSocketCall(Map<String, dynamic> callData) {
+  // ✅ Счётчик для генерации уникальных receptionId
+  int _receptionIdCounter =
+      1000; // Начинаем с 1000, чтобы не пересекаться с реальными ID
+
+  // ✅ Принимаем ВСЁ сообщение, а не только data
+  Map<String, dynamic> _transformWebSocketCall(
+    Map<String, dynamic> fullMessage,
+  ) {
+    // ✅ Берём data из сообщения
+    final callData = fullMessage['data'] as Map<String, dynamic>;
+
+    // ✅ Берём шаблоны из корня сообщения (не из data!)
+    final List<dynamic>? availableTemplates =
+        fullMessage['template'] as List<dynamic>?;
+    // Также берём коды шаблонов (если они есть отдельно)
+    final List<dynamic>? templateCodes =
+        fullMessage['templates'] as List<dynamic>? ??
+        callData['templates'] as List<dynamic>?;
+
     final dateStartStr = callData['dateStart'] as String?;
     final createdAt = dateStartStr != null
         ? DateTime.parse(dateStartStr).toLocal()
@@ -61,6 +78,26 @@ class WebSocketProvider extends ChangeNotifier {
 
     // Из data берем client и doctor
     final client = callData['client'] as Map<String, dynamic>?;
+
+    List<dynamic> filteredTemplates = [];
+
+    if (availableTemplates != null) {
+      if (templateCodes != null) {
+        // ✅ Фильтруем шаблоны по кодам
+        filteredTemplates = availableTemplates.where((template) {
+          final code = template['templateCode'] as String?;
+          return templateCodes.contains(code);
+        }).toList();
+      } else {
+        // Если коды не указаны, используем все доступные шаблоны
+        filteredTemplates = List.from(availableTemplates);
+      }
+    }
+
+    print('🔍 Фильтрация шаблонов:');
+    print('  - templateCodes: $templateCodes');
+    print('  - availableTemplates count: ${availableTemplates?.length}');
+    print('  - filteredTemplates count: ${filteredTemplates.length}');
 
     return {
       'id': callData['number'], // используем number как ID
@@ -87,9 +124,15 @@ class WebSocketProvider extends ChangeNotifier {
           'lastName': client?['name']?.split(' ')[0] ?? '', // -> "Яшкина"
           'middleName': client?['name']?.split(' ')[2] ?? '', // -> "Витальевна"
           'birthDate': client?['birthDate'], // если birthDate есть
+          // ✅ Генерируем уникальный receptionId
+          'receptionId': _receptionIdCounter++, // Увеличиваем счётчик
+          // ✅ Передаём ОТФИЛЬТРОВАННЫЕ шаблоны
+          'templates': filteredTemplates.cast<Map<String, dynamic>>(),
         },
       ],
       'isCompleted': false,
+      // ✅ Сохраняем ОТФИЛЬТРОВАННЫЕ шаблоны из WebSocket (опционально, можно и в patients)
+      'templates': filteredTemplates.cast<Map<String, dynamic>>(),
       // Оригинальные данные, если понадобятся
       'originalData': callData,
     };

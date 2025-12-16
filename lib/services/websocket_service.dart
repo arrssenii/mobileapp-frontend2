@@ -108,7 +108,12 @@ class WebSocketService {
 
     switch (type) {
       case 'new_call':
+        final template = notification['template'] as List?;
+        final nomenclature = notification['nomenclature'] as List?;
+
         print('🚨 Новый вызов: $data');
+        print('   Шаблонов: ${template}');
+        print('   Номенклатуры: ${nomenclature}');
         break;
       case 'call_status_update':
         print('🔄 Обновление статуса вызова: $data');

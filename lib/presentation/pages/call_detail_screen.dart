@@ -214,9 +214,13 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
       return const Text('Ошибка: ID вызова недействителен');
     }
 
+    // ✅ Передаём templates в PatientCardWidget
+    final templates = widget.call['templates'] as List<dynamic>?;
+
     return PatientCardWidget(
       patient: patient,
       emergencyCallId: emergencyCallId, // ✅ Передаём int
+      templates: templates, // ✅ Передаём шаблоны
       onPatientUpdated: () {
         // Можно обновить UI, если нужно
         setState(() {});

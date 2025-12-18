@@ -1,7 +1,8 @@
+// lib/presentation/pages/call_detail_screen.dart
 import 'package:flutter/material.dart';
-import '../../services/api_client.dart';
 import 'package:provider/provider.dart';
-import '../../providers/websocket_provider.dart';
+import '../../services/api_client.dart';
+import '../../services/auth_service.dart';
 import 'consultation_screen.dart';
 import '../widgets/date_picker_icon_button.dart';
 import '../widgets/custom_card.dart';
@@ -9,111 +10,43 @@ import '../widgets/status_chip.dart';
 import '../widgets/patient_card_widget.dart';
 
 class CallDetailScreen extends StatefulWidget {
-  final Map<String, dynamic> call;
+  final int callId;
+  final String callTime;
+  final String callAddress;
+  final String callPhone;
+  final String callStatus;
+  final List<Map<String, dynamic>> patients; // ✅ Получаем пациентов напрямую
 
-  const CallDetailScreen({super.key, required this.call});
+  const CallDetailScreen({
+    super.key,
+    required this.callId,
+    required this.callTime,
+    required this.callAddress,
+    required this.callPhone,
+    required this.callStatus,
+    required this.patients,
+  });
 
   @override
   State<CallDetailScreen> createState() => _CallDetailScreenState();
 }
 
 class _CallDetailScreenState extends State<CallDetailScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // НЕ вызываем _loadCallDetails()!
-  }
-
-  void _updateCallStatusIfCompleted() async {
-    final allCompleted = widget.call['patients'].every(
-      (patient) => patient['hasConclusion'] == true,
-    );
-
-    if (allCompleted) {
-      try {
-        final apiClient = Provider.of<ApiClient>(context, listen: false);
-        await apiClient.updateEmergencyCallStatus(
-          widget.call['id'].toString(),
-          'completed',
-        );
-
-        // Обновляем кэш
-        final webSocketProvider = Provider.of<WebSocketProvider>(
-          context,
-          listen: false,
-        );
-        webSocketProvider.updateCallStatus(
-          widget.call['id'],
-          'Завершён',
-        ); // Приватный метод, можно вынести в публичный
-
-        setState(() {
-          widget.call['isCompleted'] = true;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Вызов успешно завершен!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка обновления статуса вызова: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _completeCall() async {
-    try {
-      final apiClient = Provider.of<ApiClient>(context, listen: false);
-
-      await apiClient.updateEmergencyCallStatus(
-        widget.call['id'].toString(),
-        'completed',
-      );
-
-      // Обновляем кэш
-      final webSocketProvider = Provider.of<WebSocketProvider>(
-        context,
-        listen: false,
-      );
-      webSocketProvider.updateCallStatus(widget.call['id'], 'Завершён');
-
-      // Закрываем экран и возвращаемся к списку вызовов
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Выезд успешно завершен!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ошибка завершения выезда: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  // Убрали все ссылки на widget.call, теперь используем widget.callId, widget.patients и т.д.
 
   @override
   Widget build(BuildContext context) {
-    final patients = widget.call['patients'] as List<dynamic>? ?? [];
+    // Используем данные, переданные в конструктор
+    final patients = widget.patients;
 
+    // Вычисляем количество завершенных пациентов
     final completedCount = patients
         .where((patient) => patient['hasConclusion'] == true)
         .length;
     final totalPatients = patients.length;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Вызов #${widget.call['id']}')),
+      appBar: AppBar(title: Text('Вызов #${widget.callId}')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -127,22 +60,25 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Время: ${widget.call['time']}',
+                        'Время: ${widget.callTime}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).primaryColor,
                         ),
                       ),
+                      StatusChip(
+                        text: widget.callStatus,
+                      ), // Отображение статуса вызова
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Адрес: ${widget.call['address']}',
+                    'Адрес: ${widget.callAddress}',
                     style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Телефон: ${widget.call['phone']}',
+                    'Телефон: ${widget.callPhone}',
                     style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 8),
@@ -165,13 +101,15 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView.builder(
-                itemCount: patients.length,
-                itemBuilder: (context, index) {
-                  final patient = patients[index];
-                  return _buildPatientCard(patient);
-                },
-              ),
+              child: patients.isEmpty
+                  ? const Center(child: Text('Нет пациентов для этого вызова'))
+                  : ListView.builder(
+                      itemCount: patients.length,
+                      itemBuilder: (context, index) {
+                        final patient = patients[index];
+                        return _buildPatientCard(patient);
+                      },
+                    ),
             ),
 
             // Кнопка завершения выезда
@@ -200,32 +138,76 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   }
 
   Widget _buildPatientCard(Map<String, dynamic> patient) {
-    // ✅ Преобразуем widget.call['id'] в int
-    int? emergencyCallId;
-    final idValue = widget.call['id'];
-    if (idValue is String) {
-      emergencyCallId = int.tryParse(idValue);
-    } else if (idValue is int) {
-      emergencyCallId = idValue;
-    }
-
-    if (emergencyCallId == null) {
-      // Обработка ошибки, если ID не удалось распарсить
-      return const Text('Ошибка: ID вызова недействителен');
-    }
-
-    // ✅ Передаём templates в PatientCardWidget
-    final templates = widget.call['templates'] as List<dynamic>?;
-
+    // Передаём данные пациента напрямую в PatientCardWidget
     return PatientCardWidget(
       patient: patient,
-      emergencyCallId: emergencyCallId, // ✅ Передаём int
-      templates: templates, // ✅ Передаём шаблоны
-      onPatientUpdated: () {
-        // Можно обновить UI, если нужно
-        setState(() {});
-      },
+      emergencyCallId: widget.callId,
+      onPatientUpdated: _updateCallStatusIfCompleted,
       onCallCompleted: _updateCallStatusIfCompleted,
     );
+  }
+
+  void _updateCallStatusIfCompleted() async {
+    // Проверяем, завершены ли все пациенты
+    final allCompleted = widget.patients.every(
+      (patient) => patient['hasConclusion'] == true,
+    );
+
+    if (allCompleted) {
+      try {
+        final apiClient = Provider.of<ApiClient>(context, listen: false);
+
+        // Обновляем статус вызова на сервере
+        await apiClient.updateEmergencyCallStatus(
+          widget.callId.toString(),
+          'completed',
+        );
+
+        // НЕ МЕНЯЕМ widget.patients, потому что он не является частью состояния CallDetailScreen
+        // Вместо этого, мы можем просто показать сообщение
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Вызов успешно завершен!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка обновления статуса вызова: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _completeCall() async {
+    try {
+      final apiClient = Provider.of<ApiClient>(context, listen: false);
+
+      // Обновляем статус вызова на сервере
+      await apiClient.updateEmergencyCallStatus(
+        widget.callId.toString(),
+        'completed',
+      );
+
+      // Закрываем экран
+      Navigator.pop(context, true); // Возвращаем true как сигнал о завершении
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Выезд успешно завершен!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка завершения выезда: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

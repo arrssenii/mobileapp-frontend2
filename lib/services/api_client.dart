@@ -296,110 +296,109 @@ class ApiClient {
       final response = await _dio.post('/auth/', data: credentials);
       print('Auth URL: ${response.realUri}');
       if (response.statusCode == 200) {
-        // Проверяем структуру ответа
         final responseData = response.data as Map<String, dynamic>;
-
-        // Обрабатываем разные форматы ответа
         Map<String, dynamic> authData;
         if (responseData.containsKey('data')) {
-          // Формат: {data: {id: 5, token: ...}, message: success, ...}
           authData = responseData['data'] as Map<String, dynamic>;
         } else {
-          // Формат: {id: 5, token: ...}
           authData = responseData;
         }
+        final userId = authData['id']; // userId здесь может быть int или String
+        final token = authData['token'];
 
-        // Сохраняем токен
-        if (authData['token'] != null) {
-          _authToken = authData['token'] as String;
-          await _authService.saveToken(_authToken!);
+        if (token != null) {
+          _authToken = token.toString();
+          await _authService.saveToken(_authToken!); // Сохраняем токен
           _dio.options.headers['Authorization'] = 'Bearer $_authToken';
-        }
 
-        // Сохраняем ID доктора
-        if (authData['id'] != null) {
-          final doctorId = authData['id'].toString();
-          await _authService.saveDoctorId(doctorId);
+          // --- ДОБАВЬТЕ ЭТИ СТРОКИ ---
+          if (userId != null) {
+            // Сохраняем ID доктора в AuthService, чтобы он был доступен при перезапуске
+            await _authService.saveDoctorId(
+              userId.toString(),
+            ); // Сохраняем как строку
+            debugPrint('🔑 ID доктора сохранен в AuthService: $userId');
+          }
+          // --------------------------
 
-          // TODO: Загружаем полные данные доктора когда будет готов API
-          // final doctorData = await getDoctorById(doctorId);
-          // _currentDoctor = Doctor.fromJson(doctorData); // Используем модель Doctor
-          // debugPrint('🔑 Доктор авторизован: ${_currentDoctor!.fullTitle}');
-          debugPrint('🔑 Доктор авторизован: ID=$doctorId');
+          debugPrint('🔑 Доктор авторизован: ID=$userId');
+        } else {
+          // Сервер вернул 200, но токен отсутствует
+          throw ApiError(
+            statusCode: response.statusCode,
+            message: 'Ошибка авторизации: недействительный токен',
+            rawError: response.data,
+          );
         }
 
         return responseData;
       } else {
-        // Формируем детализированное сообщение об ошибке
-        final errorDetails = {
-          'status': response.statusCode,
-          'headers': response.headers.map,
-          'data': response.data,
-          'request': {
-            'method': 'POST',
-            'url': response.realUri.toString(),
-            'headers': _dio.options.headers,
-          },
-        };
-
-        debugPrint('⚠️ Ошибка авторизации: ${jsonEncode(errorDetails)}');
+        // Сервер вернул код ошибки (например, 400, 401, 404)
+        // --- ОПРЕДЕЛЯЕМ СООБЩЕНИЕ НА ОСНОВЕ КОДА ---
+        String errorMessage =
+            'Неизвестная ошибка сервера (${response.statusCode})';
+        if (response.statusCode == 401) {
+          errorMessage = 'Неверный логин или пароль';
+        } else if (response.statusCode == 404) {
+          errorMessage = 'Пользователь не найден';
+        } else if (response.statusCode == 400) {
+          // Попробуем получить сообщение из тела ответа, если оно есть
+          final serverMessage = response.data['message']?.toString();
+          errorMessage = serverMessage != null
+              ? 'Ошибка: $serverMessage'
+              : 'Неверные данные для входа';
+        }
+        // Можно добавить другие коды по необходимости
 
         throw ApiError(
           statusCode: response.statusCode,
-          message: _formatErrorMessage(response),
-          rawError: errorDetails,
+          message: errorMessage,
+          rawError: response.data,
         );
       }
     } on DioException catch (e) {
-      final request = e.requestOptions;
-      final response = e.response;
-      // Форматируем полную информацию об ошибке
-      final errorMessage =
-          '''
-  🚨 КРИТИЧЕСКАЯ ОШИБКА АВТОРИЗАЦИИ
-  ════════════════════════════════
-  📌 Основная информация:
-  • Тип: ${e.type}
-  • Код: ${response?.statusCode ?? 'N/A'}
-  • Сообщение: ${e.message}
+      // --- ОШИБКА СЕТИ ИЛИ СЕРВЕРА ЧЕРЕЗ DioException ---
+      String errorMessage = 'Неизвестная ошибка сети';
+      int? statusCode = e.response?.statusCode;
 
-  🌐 Сетевая информация:
-  • URL: ${request.uri}
-  • Метод: ${request.method}
-  • Таймаут: ${request.connectTimeout}ms
-
-  📦 Заголовки запроса:
-  ${_formatHeaders(request.headers)}
-
-  📝 Тело запроса:
-  ${request.data is Map ? jsonEncode(request.data) : request.data}
-
-  ════════════════════════════════
-  📡 Ответ сервера:
-  • Статус: ${response?.statusCode}
-  • Статус-текст: ${response?.statusMessage}
-
-  📋 Заголовки ответа:
-  ${response != null ? _formatHeaders(response.headers.map) : 'Нет ответа'}
-
-  📄 Тело ответа:
-  ${response?.data != null ? jsonEncode(response?.data) : 'Пусто'}
-
-  ⏱ Временные метки:
-  • Время запроса: ${DateTime.now()}
-  • Длительность: ${e.response?.headers.value('x-response-time')}
-  ════════════════════════════════
-  ''';
-
-      debugPrint(errorMessage);
+      // Проверяем, была ли это ошибка ответа (например, 400, 401, 404)
+      if (e.response != null) {
+        // Это ошибка сервера (не сеть), а код состояния
+        statusCode = e.response!.statusCode;
+        if (statusCode == 401) {
+          errorMessage = 'Неверный логин или пароль';
+        } else if (statusCode == 404) {
+          errorMessage = 'Пользователь не найден';
+        } else if (statusCode == 400) {
+          // Попробуем получить сообщение из тела ответа, если оно есть
+          final serverMessage = e.response!.data['message']?.toString();
+          errorMessage = serverMessage != null
+              ? 'Ошибка: $serverMessage'
+              : 'Неверные данные для входа';
+        } else {
+          // Другой код ошибки сервера
+          errorMessage = 'Ошибка сервера (${statusCode})';
+        }
+      } else {
+        // Это действительно ошибка сети (нет подключения, таймаут)
+        errorMessage = 'Нет подключения к интернету';
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.sendTimeout) {
+          errorMessage = 'Таймаут соединения';
+        } else if (e.type == DioExceptionType.connectionError) {
+          errorMessage = 'Ошибка подключения к серверу';
+        }
+      }
 
       throw ApiError(
-        statusCode: e.response?.statusCode ?? 500,
-        message: errorMessage, // Полное сообщение для отображения
+        statusCode: statusCode,
+        message: errorMessage,
         rawError: {
           'type': e.type.toString(),
           'request': e.requestOptions.data,
-          'response': e.response?.data,
+          'response': e.response?.data, // Может быть null для сетевых ошибок
+          'error': e.message,
         },
       );
     }
@@ -935,6 +934,57 @@ class ApiClient {
       );
       return response.data as Map<String, dynamic>;
     }, errorMessage: 'Ошибка обновления статуса вызова');
+  }
+
+  // Получение вызовов для доктора
+  Future<Map<String, dynamic>> getEmergencyCallsByDoctorAndDate(
+    String doctorCode,
+  ) async {
+    return _handleApiCall(() async {
+      final response = await _dio.get('/smp/call/$doctorCode');
+      return response.data as Map<String, dynamic>;
+    }, errorMessage: 'Ошибка загрузки вызовов для доктора');
+  }
+
+  // Получение шаблонов по кодам
+  Future<Map<String, dynamic>> getTemplatesByCodes(
+    List<String> templateCodes,
+  ) async {
+    return _handleApiCall(() async {
+      final response = await _dio.get(
+        '/smp/templates',
+        queryParameters: {'codes': templateCodes.join(',')},
+      );
+      return response.data as Map<String, dynamic>;
+    }, errorMessage: 'Ошибка загрузки шаблонов');
+  }
+
+  // Получение полной номенклатуры
+  Future<Map<String, dynamic>> getFullNomenclature() async {
+    return _handleApiCall(() async {
+      final response = await _dio.get('/smp/nomenclature');
+      return response.data as Map<String, dynamic>;
+    }, errorMessage: 'Ошибка загрузки номенклатуры');
+  }
+
+  // Создание визита в 1С
+  Future<Map<String, dynamic>> createVisitIn1C(
+    Map<String, dynamic> data,
+  ) async {
+    return _handleApiCall(() async {
+      final response = await _dio.post('/smp/send', data: data);
+      return response.data as Map<String, dynamic>;
+    }, errorMessage: 'Ошибка создания визита в 1С');
+  }
+
+  // Подтверждение получения вызова
+  Future<Map<String, dynamic>> acknowledgeCallDelivery(
+    String callNumber,
+  ) async {
+    return _handleApiCall(() async {
+      final response = await _dio.post('/smp/call/$callNumber/ack');
+      return response.data as Map<String, dynamic>;
+    }, errorMessage: 'Ошибка подтверждения получения вызова');
   }
 
   // Вспомогательные методы

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// Убедитесь, что этот импорт больше не нужен, если вы его удаляете из проекта
+// import 'package:your_package/websocket_provider.dart'; // или websocket_service.dart
 import 'schedule_screen.dart';
 import 'patient_list_screen.dart';
 import 'calls_screen.dart';
-import '../../services/auth_service.dart';
-import '../../providers/websocket_provider.dart'; // 👈 Импортируем WebSocketProvider
+// Убедитесь, что этот импорт больше не нужен, если вы его удаляете из проекта
+// import '../../services/websocket_service.dart'; // или другой файл сервиса/провайдера вебсокета
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,47 +16,48 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+  int _currentIndex = 1;
 
-  final List<Widget> _pages = [PatientListScreen(), CallsScreen()];
+  final List<Widget> _pages = [
+    PatientListScreen(),
+    CallsScreen(),
+    // Добавьте другие экраны, если они есть, например, ScheduleScreen
+    // ScheduleScreen(),
+  ];
 
+  // Убираем подключение WebSocket из initState
   @override
   void initState() {
     super.initState();
-    // Подключаемся к вебсокету после инициализации
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectWebSocket();
-    });
+    // Удаляем весь код, связанный с WebSocket
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _connectWebSocket();
+    // });
   }
 
-  Future<void> _connectWebSocket() async {
-    try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      // ✅ Используем WebSocketProvider вместо WebSocketService
-      final webSocketProvider = Provider.of<WebSocketProvider>(
-        context,
-        listen: false,
-      );
-
-      final doctorId = await authService.getDoctorId();
-      if (doctorId != null) {
-        await webSocketProvider.connect(
-          doctorId.toString(),
-        ); // Подключаем через провайдер
-        debugPrint(
-          '✅ WebSocket подключен через WebSocketProvider для доктора: $doctorId',
-        );
-      } else {
-        debugPrint('⚠️ ID доктора не найден, WebSocket не подключен');
-      }
-    } catch (e) {
-      debugPrint('❌ Ошибка подключения WebSocket: $e');
-    }
-  }
+  // Убираем метод подключения WebSocket
+  // Future<void> _connectWebSocket() async {
+  //   try {
+  //     final authService = Provider.of<AuthService>(context, listen: false);
+  //     final webSocketProvider = Provider.of<WebSocketProvider>(
+  //       context,
+  //       listen: false,
+  //     );
+  //     final doctorId = await authService.getDoctorId();
+  //     if (doctorId != null) {
+  //       await webSocketProvider.connect(doctorId.toString());
+  //       debugPrint('✅ WebSocket подключен через WebSocketProvider для доктора: $doctorId');
+  //     } else {
+  //       debugPrint('⚠️ ID доктора не найден, WebSocket не подключен');
+  //     }
+  //   } catch (e) {
+  //     debugPrint('❌ Ошибка подключения WebSocket: $e');
+  //   }
+  // }
 
   @override
   void dispose() {
-    // ❌ НЕ НУЖНО отключать WebSocketService напрямую
+    // Убираем отключение WebSocket из dispose
     // final webSocketService = Provider.of<WebSocketService>(context, listen: false);
     // webSocketService.disconnect();
     super.dispose();
@@ -71,12 +74,14 @@ class _MainScreenState extends State<MainScreen> {
               color: const Color(0xFF4682B4).withOpacity(0.3),
               spreadRadius: 1,
               blurRadius: 5,
-              offset: const Offset(0, -2),
+              offset: const Offset(0, -2), // Тень сверху
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(15), // Закругление верхних углов
+          ),
           child: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: (index) => setState(() => _currentIndex = index),
@@ -91,6 +96,7 @@ class _MainScreenState extends State<MainScreen> {
                 activeIcon: Icon(Icons.local_hospital, size: 28),
                 label: 'Вызовы',
               ),
+              // Добавьте другие BottomNavigationBarItem, если добавляете больше экранов
             ],
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.white70,
@@ -102,7 +108,7 @@ class _MainScreenState extends State<MainScreen> {
               fontSize: 12,
             ),
             unselectedLabelStyle: const TextStyle(fontSize: 12),
-            elevation: 0,
+            elevation: 0, // Убираем тень от BottomNavigationBar, если она есть
           ),
         ),
       ),

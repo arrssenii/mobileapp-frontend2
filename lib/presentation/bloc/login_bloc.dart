@@ -17,25 +17,43 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   }
 
   Future<void> _onLoginRequested(
-  LoginRequested event,
-  Emitter<LoginState> emit,
-) async {
-  if (!_isValidPhone(event.phone)) {
-    emit(LoginError(message: 'Неверный формат телефона'));
-    return;
+    LoginRequested event,
+    Emitter<LoginState> emit,
+  ) async {
+    if (!_isValidPhone(event.phone)) {
+      // Или _isValidLogin, если используете логин
+      emit(
+        LoginError(message: 'Неверный формат телефона/логина'),
+      ); // Уточните сообщение
+      return;
+    }
+    emit(LoginLoading());
+    try {
+      final user = await loginUseCase(
+        event.phone,
+        event.password,
+      ); // phone или login
+      emit(LoginSuccess(user: user, userId: user.userId));
+    } on ApiError catch (e) {
+      // Ловим ApiError, созданный в ApiClient
+      emit(
+        LoginError(message: e.message ?? 'Ошибка авторизации'),
+      ); // Используем сообщение из ApiError
+    } on DioException catch (e) {
+      // Ловим DioException напрямую, если ApiClient её не обернул
+      String errorMessage = 'Ошибка сети';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        errorMessage = 'Таймаут соединения';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage = 'Нет подключения к интернету';
+      }
+      emit(LoginError(message: errorMessage));
+    } catch (e) {
+      emit(LoginError(message: 'Неизвестная ошибка: ${e.toString()}'));
+    }
   }
-  emit(LoginLoading());
-  try {
-    final user = await loginUseCase(event.phone, event.password);
-    emit(LoginSuccess(user: user, userId: user.userId));
-  } on ApiError catch (e) {
-    emit(LoginError(message: e.message));
-  } on DioException catch (e) {
-    emit(LoginError(message: e.message ?? 'Ошибка сети'));
-  } catch (e) {
-    emit(LoginError(message: 'Неизвестная ошибка: ${e.toString()}'));
-  }
-}
 }
 
 bool _isValidPhone(String phone) {

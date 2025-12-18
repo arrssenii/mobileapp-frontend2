@@ -1,6 +1,6 @@
 name: kvant_medpuls
 description: "Квант.МедПульс"
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
@@ -35,6 +35,9 @@ dependencies:
   http_parser: ^4.1.2
   image: ^4.5.4
   flutter_svg: ^2.0.9
+  sqflite: ^2.3.2 # или последняя версия
+  path: ^1.8.3 # или последняя версия
+  sqflite_common_ffi_web: 1.0.2 # Добавьте эту строку
 
 dev_dependencies:
   flutter_test:
@@ -49,7 +52,6 @@ flutter:
     - assets/fonts/Roboto-Regular.ttf
     - lib/core/assets/icon.png
     - lib/core/assets/logo.svg
-
 
 flutter_icons:
   android: true

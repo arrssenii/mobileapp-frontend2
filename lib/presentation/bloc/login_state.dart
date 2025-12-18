@@ -3,7 +3,7 @@ part of 'login_bloc.dart';
 // Базовое состояние авторизации
 abstract class LoginState extends Equatable {
   const LoginState();
-  
+
   @override
   List<Object> get props => [];
 }
@@ -18,9 +18,9 @@ class LoginLoading extends LoginState {}
 class LoginSuccess extends LoginState {
   final User user;
   final int userId;
-  
+
   const LoginSuccess({required this.user, required this.userId});
-  
+
   @override
   List<Object> get props => [user];
 }
@@ -28,9 +28,9 @@ class LoginSuccess extends LoginState {
 // Ошибка авторизации
 class LoginError extends LoginState {
   final String message;
-  
+
   const LoginError({required this.message});
-  
+
   @override
   List<Object> get props => [message];
 }

@@ -1,23 +1,19 @@
+// lib/presentation/widgets/call_card.dart
 import 'package:flutter/material.dart';
 
 class CallCard extends StatelessWidget {
   final Map<String, dynamic> call;
   final VoidCallback onTap;
 
-  const CallCard({
-    super.key,
-    required this.call,
-    required this.onTap,
-  });
+  const CallCard({super.key, required this.call, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final bool isCompleted = call['isCompleted'] ?? false;
     final String executionStatus = isCompleted ? 'Завершён' : 'Выполняется';
 
-    final patients = call['patients'] as List<dynamic>;
-    final completedCount = patients.where((p) => p['hasConclusion'] == true).length;
-    final totalPatients = patients.length;
+    // --- ИСПОЛЬЗУЕМ ФИО ПАЦИЕНТА ВМЕСТО КОЛ-ВА ПАЦИЕНТОВ ---
+    final patientFullName = call['patientFullName'] ?? 'Пациент не указан';
 
     return GestureDetector(
       onTap: onTap,
@@ -47,7 +43,7 @@ class CallCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  
+
                   Text(
                     '${call['address']}',
                     style: const TextStyle(
@@ -59,7 +55,11 @@ class CallCard extends StatelessWidget {
 
                   Row(
                     children: [
-                      Icon(Icons.phone, size: 20, color: Theme.of(context).primaryColor),
+                      Icon(
+                        Icons.phone,
+                        size: 20,
+                        color: Theme.of(context).primaryColor,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Телефон: ${call['phone']}',
@@ -69,13 +69,23 @@ class CallCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
+                  // --- ЗАМЕНА: ПОКАЗЫВАЕМ ФИО ПАЦИЕНТА ---
                   Row(
                     children: [
-                      Icon(Icons.people_outline, size: 20, color: Theme.of(context).primaryColor),
+                      Icon(
+                        Icons.person_outline,
+                        size: 20,
+                        color: Theme.of(context).primaryColor,
+                      ), // Иконка для пациента
                       const SizedBox(width: 8),
-                      Text(
-                        'Пациенты: $completedCount/$totalPatients завершено',
-                        style: const TextStyle(fontSize: 16),
+                      Expanded(
+                        // Expanded, чтобы текст не вылезал за границы
+                        child: Text(
+                          'Пациент: $patientFullName',
+                          style: const TextStyle(fontSize: 16),
+                          overflow: TextOverflow
+                              .ellipsis, // Обрезаем, если слишком длинное
+                        ),
                       ),
                     ],
                   ),
@@ -92,7 +102,7 @@ class CallCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isCompleted ? Colors.green : Color(0xFF1E90FF),
+                    color: isCompleted ? Colors.green : const Color(0xFF1E90FF),
                   ),
                 ),
               ),

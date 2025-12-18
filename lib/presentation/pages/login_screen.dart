@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/doctor_model.dart';
+import '../../core/theme/theme_config.dart';
 
 import 'main_screen.dart';
 
@@ -25,10 +26,7 @@ class AppVersionWidget extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 16.0),
           child: Text(
             snapshot.hasData ? 'Версия: ${snapshot.data}' : '',
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
             textAlign: TextAlign.center,
           ),
         );
@@ -97,10 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       final phone = _phoneController.text;
       final password = _passwordController.text;
-      
-      context.read<LoginBloc>().add(
-        LoginRequested(phone, password),
-      );
+
+      context.read<LoginBloc>().add(LoginRequested(phone, password));
     }
   }
 
@@ -117,14 +113,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   await _loadDoctorData(context, state.userId);
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const MainScreen()),
                   );
                 }
                 if (state is LoginError) {
+                  // --- ОТОБРАЖЕНИЕ СООБЩЕНИЯ ОБ ОШИБКЕ ---
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message)),
+                    SnackBar(
+                      content: Text(
+                        state.message,
+                      ), // <-- Текст ошибки из LoginError
+                      backgroundColor: Colors.red, // Цвет для ошибки
+                    ),
                   );
                 }
               },
@@ -135,10 +135,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Логотип
-                      SvgPicture.asset(
-                        'lib/core/assets/logo.svg',
-                        height: 80,
-                        fit: BoxFit.contain,
+                      SizedBox(
+                        // Оборачиваем SvgPicture.asset в SizedBox для точного контроля размера
+                        width: 200, // Ширина логотипа
+                        height: 200, // Высота логотипа
+                        child: SvgPicture.asset(
+                          'lib/core/assets/logo.svg',
+                          fit: BoxFit
+                              .contain, // Растягиваем изображение по контейнеру
+                          colorFilter: ColorFilter.mode(
+                            AppTheme.primaryColor,
+                            BlendMode.srcIn,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 24),
                       const Text(
@@ -151,27 +160,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Поле телефона
                       ModernPhoneField(
                         controller: _phoneController,
                         isRequired: true,
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Поле пароля
                       ModernFormField(
                         label: 'Пароль',
                         controller: _passwordController,
                         isRequired: true,
                         obscureText: true,
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppInputTheme.textSecondary),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: AppInputTheme.textSecondary,
+                        ),
                         hintText: 'Введите пароль',
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _handleLogin(context),
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Кнопка входа
                       ElevatedButton(
                         onPressed: state is LoginLoading
@@ -192,7 +204,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text(

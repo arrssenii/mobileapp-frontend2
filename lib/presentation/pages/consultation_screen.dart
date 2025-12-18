@@ -32,7 +32,7 @@ class ConsultationScreen extends StatefulWidget {
   final int recordId;
   final int doctorId;
   final int emergencyCallId;
-  // ✅ Принимаем шаблоны из WebSocket
+  // ✅ Принимаем шаблоны из WebSocket (но теперь мы их получаем через HTTP)
   final List<Map<String, dynamic>> templatesFromWebSocket;
 
   const ConsultationScreen({
@@ -62,15 +62,48 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ Используем шаблоны из WebSocket
-    _templates = widget.templatesFromWebSocket;
+    // ✅ Загружаем шаблоны через HTTP
+    _loadTemplates();
+  }
+
+  Future<void> _loadTemplates() async {
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
 
-    // Если пришёл только один шаблон, автоматически его выбираем
-    if (_templates.length == 1) {
-      _selectTemplate(_templates[0]);
+    try {
+      final apiClient = Provider.of<ApiClient>(context, listen: false);
+
+      // ✅ Загружаем шаблоны по кодам
+      final templateCodes = widget.templatesFromWebSocket
+          .map((template) => template['templateCode'])
+          .toList();
+      final templatesResponse = await apiClient.getTemplatesByCodes(
+        templateCodes as List<String>,
+      );
+      final templatesData = templatesResponse['data'] as List<dynamic>?;
+
+      if (templatesData == null) {
+        throw Exception('Получен некорректный ответ от сервера (шаблоны)');
+      }
+
+      setState(() {
+        _templates = templatesData.cast<Map<String, dynamic>>();
+      });
+    } catch (e) {
+      setState(() {
+        _templates = [];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка загрузки шаблонов: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -114,20 +147,19 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     }
 
     try {
-      // ✅ Вместо HTTP-запроса — обновляем данные в родительском виджете (PatientCardWidget)
-      // через возврат результата (true) в Navigator.pop(context, true)
-      // или через callback, который ты передаёшь в ConsultationScreen
+      final apiClient = Provider.of<ApiClient>(context, listen: false);
 
-      // Пример: обновляем diagnosis и recommendations в _formValues
-      final diagnosis = _formValues['diagnosis']?.toString() ?? '';
-      final recommendations = _formValues['recommendations']?.toString() ?? '';
-
-      // ✅ Помечаем пациента как "имеющего заключение"
-      // Это можно сделать через callback, переданный в ConsultationScreen
-      // или через Provider, если ты хочешь обновить кэш
+      await apiClient.updateEmergencyReception(
+        receptionId: widget.recordId,
+        diagnosis: _formValues['diagnosis']?.toString() ?? '',
+        recommendations: _formValues['recommendations']?.toString() ?? '',
+        specializationUpdates: {}, // или нужные данные
+        medServices: [], // или нужные данные
+        totalCost: 0, // или нужное значение
+        // ... другие поля
+      );
 
       if (!mounted) return;
-      // ✅ Возвращаем true, чтобы PatientCardWidget знал, что консультация завершена
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -250,9 +282,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   // ✅ Виджет для отображения поля ввода
-  // ✅ Виджет для отображения поля ввода
   Widget _buildFieldWidget(DynamicField field) {
-    // ✅ Пропускаем вычисляемые поля
+    // Пропускаем вычисляемые поля
     if (field.calculated) return Container();
 
     return Padding(
@@ -265,19 +296,13 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          // ✅ В зависимости от типа поля — отображаем разные виджеты
-          if (field.type == 'string' ||
-              field.type == 'text' ||
-              field.type == 'longtext')
+          if (field.type == 'string')
             TextFormField(
               initialValue: field.defaultVal,
               decoration: InputDecoration(
                 hintText: field.defaultVal ?? '',
                 border: const OutlineInputBorder(),
               ),
-              maxLines: field.type == 'text' || field.type == 'longtext'
-                  ? 5
-                  : 1,
               onChanged: (value) {
                 _formValues[field.code ?? field.name] = value;
               },
@@ -332,7 +357,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               },
             )
           else if (field.type == 'boolean')
-            // ✅ Checkbox
             Row(
               children: [
                 Checkbox(
@@ -344,19 +368,15 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                 Expanded(child: Text(field.name)),
               ],
             )
-          else if (field.type == 'select' ||
-              (field.list.isNotEmpty &&
-                  field.type != 'radio' &&
-                  field.type != 'checkbox'))
-            // ✅ Dropdown
+          else if (field.type == 'select' || field.list.isNotEmpty)
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(border: OutlineInputBorder()),
               value: _formValues[field.code ?? field.name]?.toString(),
               items: field.list.map((item) {
-                // ✅ Используем ?? для item['name'], чтобы избежать null
-                final itemName =
-                    item['name']?.toString() ?? 'Неизвестный вариант';
-                return DropdownMenuItem(value: itemName, child: Text(itemName));
+                return DropdownMenuItem(
+                  value: item['name']?.toString(),
+                  child: Text(item['name']?.toString() ?? ''),
+                );
               }).toList(),
               onChanged: (value) {
                 _formValues[field.code ?? field.name] = value;
@@ -365,45 +385,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                   ? (value) => value == null ? 'Поле обязательно' : null
                   : null,
             )
-          else if (field.type == 'radio')
-            // ✅ Radio buttons
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: field.list.map((item) {
-                // ✅ Используем ?? для item['name'], чтобы избежать null
-                final itemName =
-                    item['name']?.toString() ?? 'Неизвестный вариант';
-                return RadioListTile<String>(
-                  title: Text(itemName),
-                  value: itemName,
-                  groupValue: _formValues[field.code ?? field.name]?.toString(),
-                  onChanged: (value) {
-                    _formValues[field.code ?? field.name] = value;
-                  },
-                );
-              }).toList(),
-            )
-          else if (field.type == 'checkbox')
-            // ✅ Multiple checkboxes
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: field.list.map((item) {
-                // ✅ Используем ?? для item['name'], чтобы избежать null
-                final itemName =
-                    item['name']?.toString() ?? 'Неизвестный вариант';
-                final key = '${field.code ?? field.name}_${item['id']}';
-                final bool isChecked = _formValues[key] == true;
-                return CheckboxListTile(
-                  title: Text(itemName),
-                  value: isChecked,
-                  onChanged: (value) {
-                    _formValues[key] = value;
-                  },
-                );
-              }).toList(),
-            )
           else
-            // ✅ Если тип неизвестен — отображаем текстовое поле
             TextFormField(
               initialValue: field.defaultVal,
               decoration: InputDecoration(
@@ -413,11 +395,6 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               onChanged: (value) {
                 _formValues[field.code ?? field.name] = value;
               },
-              validator: field.required
-                  ? (value) => (value?.trim().isEmpty ?? true)
-                        ? 'Поле обязательно'
-                        : null
-                  : null,
             ),
         ],
       ),
